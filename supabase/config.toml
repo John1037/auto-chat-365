@@ -156,12 +156,17 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:3000"
+site_url = "https://autochat365.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# TODO(M7): update to https://autochat365.com once the domain cutover lands.
-additional_redirect_urls = []
+# Magic-link sign-in (site/src/login.ts) passes emailRedirectTo explicitly, and it must
+# match one of these exactly or GoTrue silently falls back to site_url instead.
+additional_redirect_urls = [
+  "https://autochat365.com/dashboard.html",
+  "http://127.0.0.1:8787/dashboard.html",
+  "http://localhost:8787/dashboard.html"
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

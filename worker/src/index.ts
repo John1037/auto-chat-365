@@ -16,6 +16,15 @@ export default {
       }
 
       switch (pathname) {
+        case "/api/config":
+          // Both values are meant to be public -- the publishable key is designed to
+          // be exposed client-side, same as the URL. This lets the static site pages
+          // (login.html/dashboard.html) initialize supabase-js without hardcoding
+          // which Supabase project to talk to at build time.
+          return Response.json({
+            supabaseUrl: env.SUPABASE_URL,
+            supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY,
+          });
         case "/api/session-start":
           return handleSessionStart(request, env);
         case "/api/chat":

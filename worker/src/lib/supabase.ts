@@ -23,15 +23,26 @@ export function getUserClient(env: Env, jwt: string): SupabaseClient {
   });
 }
 
+export interface VerifiedUser {
+  id: string;
+  email: string | null;
+  isAnonymous: boolean;
+}
+
 // Verifies a bearer token by round-tripping to GoTrue (auth.getUser), rather than
 // decoding the JWT payload by hand -- this confirms the token hasn't been revoked,
 // not just that it's well-formed. Returns null if the token is missing/invalid.
-export async function getVerifiedUserId(env: Env, jwt: string | null): Promise<string | null> {
+export async function getVerifiedUser(env: Env, jwt: string | null): Promise<VerifiedUser | null> {
   if (!jwt) return null;
   const client = getUserClient(env, jwt);
   const { data, error } = await client.auth.getUser(jwt);
   if (error || !data.user) return null;
-  return data.user.id;
+  return { id: data.user.id, email: data.user.email ?? null, isAnonymous: data.user.is_anonymous === true };
+}
+
+export async function getVerifiedUserId(env: Env, jwt: string | null): Promise<string | null> {
+  const user = await getVerifiedUser(env, jwt);
+  return user?.id ?? null;
 }
 
 export function getBearerToken(request: Request): string | null {

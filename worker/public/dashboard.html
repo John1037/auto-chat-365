@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — Chat365</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <p id="loading">Loading your dashboard...</p>
+  <p id="error" class="status error" hidden>Something went wrong loading your dashboard. Try refreshing, or <a href="/login.html">sign in again</a>.</p>
+  <div id="content" hidden>
+    <h1 id="tenant-name"></h1>
+    <p>Add this to your website to embed your chatbot:</p>
+    <pre class="snippet" id="embed-snippet"></pre>
+    <p><button class="button" id="sign-out">Sign out</button></p>
+  </div>
+  <script type="module" src="/dashboard.js"></script>
+</body>
+</html>

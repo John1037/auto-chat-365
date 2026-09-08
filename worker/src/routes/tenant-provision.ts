@@ -1,11 +1,66 @@
 import type { Env } from "../lib/env";
+import { getServiceClient, getVerifiedUser, getBearerToken } from "../lib/supabase";
 
-// Implemented in M4: one-time call for a freshly signed-up owner (real Supabase Auth
-// user, not a widget visitor) -- creates the tenants row + first
-// tenant_members(role='owner') row via the privileged client.
-export async function handleTenantProvision(_request: Request, _env: Env): Promise<Response> {
-  return new Response(JSON.stringify({ error: "not implemented yet" }), {
-    status: 501,
+// Get-or-create: called every time an owner lands on the dashboard after a magic-link
+// sign-in, not just the first time (magic link makes "signup" and "login" the same
+// action, so there's no separate first-time-only moment to hook). Idempotent by
+// design -- a returning owner just gets their existing tenant back.
+export async function handleTenantProvision(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  const jwt = getBearerToken(request);
+  const user = await getVerifiedUser(env, jwt);
+  if (!user) {
+    return new Response(JSON.stringify({ error: "invalid or expired session" }), { status: 401 });
+  }
+  // Widget visitor sessions (signInAnonymously) must never be able to provision a
+  // tenant -- only a real, non-anonymous owner account.
+  if (user.isAnonymous) {
+    return new Response(JSON.stringify({ error: "anonymous sessions cannot provision a tenant" }), { status: 403 });
+  }
+
+  const service = getServiceClient(env);
+
+  const { data: existingMembership, error: membershipError } = await service
+    .from("tenant_members")
+    .select("tenant_id, tenants (id, name, site_key, allowed_origins)")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membershipError) {
+    return new Response(JSON.stringify({ error: "lookup failed" }), { status: 500 });
+  }
+  if (existingMembership) {
+    return new Response(JSON.stringify({ tenant: existingMembership.tenants }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const defaultName = user.email ? `${user.email.split("@")[0]}'s workspace` : "My workspace";
+
+  const { data: tenant, error: tenantError } = await service
+    .from("tenants")
+    .insert({ name: defaultName })
+    .select("id, name, site_key, allowed_origins")
+    .single();
+  if (tenantError || !tenant) {
+    return new Response(JSON.stringify({ error: "failed to create tenant" }), { status: 500 });
+  }
+
+  const { error: memberError } = await service.from("tenant_members").insert({
+    tenant_id: tenant.id,
+    user_id: user.id,
+    role: "owner",
+  });
+  if (memberError) {
+    return new Response(JSON.stringify({ error: "failed to attach owner" }), { status: 500 });
+  }
+
+  return new Response(JSON.stringify({ tenant }), {
+    status: 201,
     headers: { "Content-Type": "application/json" },
   });
 }
