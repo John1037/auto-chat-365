@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "./supabaseClient";
+import { requireSession } from "./authGuard";
 
 interface Tenant {
   id: string;
@@ -15,30 +16,13 @@ const snippetEl = document.querySelector<HTMLElement>("#embed-snippet")!;
 const signOutButton = document.querySelector<HTMLButtonElement>("#sign-out")!;
 
 async function main() {
-  const supabase = await getSupabaseClient();
-
-  // getSession() waits for supabase-js's own detection of a magic-link redirect in
-  // the URL (access token / PKCE code) to finish before resolving, so this is safe to
-  // call immediately regardless of whether we just landed here from the email link or
-  // are revisiting with an existing session.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    location.href = "/login.html";
-    return;
-  }
-
-  // Clean the magic-link token/code out of the URL now that the session is
-  // established -- purely cosmetic, but avoids leaving a sensitive-looking fragment
-  // visible/bookmarkable.
-  history.replaceState({}, "", "/dashboard.html");
+  const context = await requireSession();
+  if (!context) return; // already redirected to /login.html
 
   try {
     const response = await fetch("/api/tenant-provision", {
       method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${context.session.access_token}` },
     });
     if (!response.ok) {
       throw new Error(`provisioning failed (${response.status})`);
