@@ -1,0 +1,13 @@
+{
+  "name": "chat365",
+  "private": true,
+  "workspaces": [
+    "widget",
+    "worker"
+  ],
+  "scripts": {
+    "build:widget": "npm run build -w widget",
+    "dev:worker": "npm run dev -w worker",
+    "dev": "npm run build:widget && npm run dev:worker"
+  }
+}

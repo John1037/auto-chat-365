@@ -1,0 +1,10 @@
+# Copy to worker/.dev.vars (gitignored) for `wrangler dev`. For local iteration, use
+# the values `supabase status` prints for the local stack (see the plan's "Local dev
+# workflow" section) -- do not point this at the cloud project until M6/pre-deploy
+# smoke testing.
+
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+OPENAI_API_KEY=
+DEEPSEEK_API_KEY=

@@ -29,6 +29,18 @@ grant select, insert on messages to authenticated;
 grant select on tenant_documents to authenticated;
 grant select on tenant_document_chunks to authenticated;
 
+-- service_role (the Worker's secret-key client) bypasses RLS via BYPASSRLS, but that
+-- only skips policy evaluation -- the base table GRANT is a separate, independent
+-- check that Postgres still enforces regardless of BYPASSRLS. Without these, every
+-- privileged Worker query fails with "permission denied" before RLS is ever
+-- consulted. service_role needs full read/write on every tenant-scoped table, since
+-- it's the only writer for widget_sessions/rate_limit_counters and the sole path for
+-- assistant-role messages, document ingestion, and tenant provisioning.
+grant select, insert, update, delete on
+  tenants, tenant_members, widget_sessions, conversations, messages,
+  tenant_documents, tenant_document_chunks, rate_limit_counters
+  to service_role;
+
 -- ---------------------------------------------------------------------------
 -- tenants: no client-role policy at all. Edge Functions read this exclusively via
 -- the secret-key client (bypasses RLS). Dashboard owners can view/update their own
