@@ -40,8 +40,18 @@ export default {
       }
     }
 
-    // run_worker_first is scoped to /api/* in wrangler.jsonc, so normal traffic never
-    // reaches here -- this is a safety fallback, not the primary asset-serving path.
+    // html_handling is "none" (see wrangler.jsonc) so that /login.html and
+    // /dashboard.html serve as their literal filenames rather than Cloudflare's
+    // default of 307-redirecting them to /login and /dashboard -- but that setting
+    // also disables the usual "/" -> "/index.html" mapping as a side effect, so "/"
+    // is listed in run_worker_first and handled explicitly here.
+    if (pathname === "/") {
+      return env.ASSETS.fetch(new Request(new URL("/index.html", request.url), request));
+    }
+
+    // run_worker_first is otherwise scoped to /api/* in wrangler.jsonc, so normal
+    // asset traffic never reaches here -- this is a safety fallback, not the primary
+    // asset-serving path.
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
