@@ -10,6 +10,6 @@
     "not_found_handling": "none"
   },
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "production"
   }
 }
