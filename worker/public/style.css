@@ -42,6 +42,38 @@ body.home {
   padding: 0;
 }
 
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  /* Solid, not translucent -- the brief is to blend into the hero image's own
+     near-black top edge, not to show the image through it. Same token the hero
+     overlay gradient resolves to at full opacity, so the seam is invisible. */
+  background: var(--ink);
+}
+
+.topbar .brand { margin-bottom: 0; }
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.topbar-link {
+  color: var(--paper);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.topbar-link:hover { color: var(--signal); }
+
 .hero { position: relative; }
 
 .hero-bg {
