@@ -25,9 +25,12 @@ h1, h2, h3 {
   font-family: 'Unbounded', sans-serif;
   font-weight: 700;
   letter-spacing: -0.01em;
+  line-height: 1.15;
   text-wrap: balance;
   margin-bottom: 0.25rem;
 }
+
+.headline-accent { color: var(--signal); }
 
 p { color: var(--ash); }
 
@@ -96,13 +99,15 @@ body.home {
 }
 
 .hero-content {
+  /* Deliberately off-center: pushed down from the very top, and anchored well
+     left of center -- but stopping short of a flush left edge, not a full
+     left-align. */
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 3rem;
+  right: 1.5rem;
   max-width: 40rem;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem;
+  padding: 6rem 0 2.5rem;
 }
 
 .brand {
