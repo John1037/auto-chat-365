@@ -107,7 +107,7 @@ body.home {
      centered instead -- see the media query below. */
   position: absolute;
   top: 0;
-  left: 25%;
+  left: 20%;
   right: 1.5rem;
   max-width: 40rem;
   padding: 6rem 0 2.5rem;
