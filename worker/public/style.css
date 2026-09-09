@@ -33,6 +33,43 @@ p { color: var(--ash); }
 
 a { color: var(--signal); }
 
+/* Homepage only -- the hero image needs to run full-bleed, so the shared
+   centered-column body constraint is lifted just for this page (login/dashboard
+   keep it). .hero-content restores a readable text width independently. */
+body.home {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hero { position: relative; }
+
+.hero-bg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 46%;
+  background: linear-gradient(to bottom, rgba(14, 18, 19, 0.8) 0%, rgba(14, 18, 19, 0.4) 55%, rgba(14, 18, 19, 0) 100%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
