@@ -1,9 +1,10 @@
 import { build } from "esbuild";
 
-// Two small, separate entry points -- each page loads only what it needs, and
-// neither has to guess which page it's on at runtime.
+// Small, separate entry points -- each page loads only what it needs, and neither
+// has to guess which page it's on at runtime. app-shell.ts is shared by every
+// authenticated page (dashboard/knowledge-base/settings.html).
 await build({
-  entryPoints: ["src/login.ts", "src/dashboard.ts"],
+  entryPoints: ["src/login.ts", "src/app-shell.ts"],
   bundle: true,
   minify: true,
   format: "esm",
@@ -11,4 +12,4 @@ await build({
   outdir: "../worker/public",
 });
 
-console.log("site: built login.js, dashboard.js -> worker/public/");
+console.log("site: built login.js, app-shell.js -> worker/public/");

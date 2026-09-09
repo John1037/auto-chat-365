@@ -5,7 +5,7 @@ node_modules/
 widget/dist/
 worker/public/widget.js
 worker/public/login.js
-worker/public/dashboard.js
+worker/public/app-shell.js
 
 # Secrets -- never commit real keys. worker/.dev.vars holds local dev secrets for
 # `wrangler dev`; production secrets are pushed via `wrangler secret put`.
