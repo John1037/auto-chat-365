@@ -32,7 +32,7 @@ h1, h2, h3 {
 /* Scoped to the homepage headline specifically, not the shared h1/h2/h3 rule --
    3x the previous 1.15 line-height. Login/dashboard's single-line headings don't
    need or want gaps this wide. */
-.hero-content h1 { line-height: 3.45; }
+.hero-content h1 { line-height: 2.415; }
 
 .headline-accent { color: var(--signal); }
 
