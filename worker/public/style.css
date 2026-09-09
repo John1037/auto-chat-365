@@ -43,8 +43,14 @@ body.home {
 }
 
 .topbar {
-  position: sticky;
+  /* fixed, not sticky -- sticky still reserves its own box in normal flow, which
+     pushed the hero image down by the bar's height. fixed takes it out of flow
+     completely, so the image starts at the true top of the page and the bar
+     floats over it from the first frame, not just once scrolled. */
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
   display: flex;
   align-items: center;
