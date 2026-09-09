@@ -51,10 +51,13 @@ body.home {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.9rem 1.5rem;
-  /* Solid, not translucent -- the brief is to blend into the hero image's own
-     near-black top edge, not to show the image through it. Same token the hero
-     overlay gradient resolves to at full opacity, so the seam is invisible. */
-  background: var(--ink);
+  /* Genuinely see-through -- sticky already lets the hero image scroll in behind
+     this once it's pinned, no separate overlay needed. The blur is legibility
+     insurance: without it, a bright bubble from the artwork scrolling directly
+     behind "Log in"/"Get started" at some scroll position could wash the text out. */
+  background: rgba(14, 18, 19, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .topbar .brand { margin-bottom: 0; }
