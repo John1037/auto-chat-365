@@ -25,10 +25,14 @@ h1, h2, h3 {
   font-family: 'Unbounded', sans-serif;
   font-weight: 700;
   letter-spacing: -0.01em;
-  line-height: 1.15;
   text-wrap: balance;
   margin-bottom: 0.25rem;
 }
+
+/* Scoped to the homepage headline specifically, not the shared h1/h2/h3 rule --
+   3x the previous 1.15 line-height. Login/dashboard's single-line headings don't
+   need or want gaps this wide. */
+.hero-content h1 { line-height: 3.45; }
 
 .headline-accent { color: var(--signal); }
 
@@ -99,15 +103,23 @@ body.home {
 }
 
 .hero-content {
-  /* Deliberately off-center: pushed down from the very top, and anchored well
-     left of center -- but stopping short of a flush left edge, not a full
-     left-align. */
+  /* Desktop: left edge pinned to one quarter of the viewport width. Mobile:
+     centered instead -- see the media query below. */
   position: absolute;
   top: 0;
-  left: 3rem;
+  left: 25%;
   right: 1.5rem;
   max-width: 40rem;
   padding: 6rem 0 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .hero-content {
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    padding: 6rem 1.5rem 2.5rem;
+  }
 }
 
 .brand {
