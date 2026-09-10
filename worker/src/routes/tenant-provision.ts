@@ -4,7 +4,10 @@ import { getServiceClient, getVerifiedUser, getBearerToken } from "../lib/supaba
 // Get-or-create: called every time an owner lands on the dashboard after a magic-link
 // sign-in, not just the first time (magic link makes "signup" and "login" the same
 // action, so there's no separate first-time-only moment to hook). Idempotent by
-// design -- a returning owner just gets their existing tenant back.
+// design -- a returning owner just gets their existing tenant (and its default
+// widget) back. site_key/allowed_origins/rate limits live on widgets now, not
+// tenants -- a tenant can have more than one -- so provisioning a brand-new tenant
+// also creates its first ("Default widget") widget.
 export async function handleTenantProvision(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -25,7 +28,7 @@ export async function handleTenantProvision(request: Request, env: Env): Promise
 
   const { data: existingMembership, error: membershipError } = await service
     .from("tenant_members")
-    .select("tenant_id, tenants (id, name, site_key, allowed_origins)")
+    .select("tenant_id, tenants (id, name)")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -33,7 +36,15 @@ export async function handleTenantProvision(request: Request, env: Env): Promise
     return new Response(JSON.stringify({ error: "lookup failed" }), { status: 500 });
   }
   if (existingMembership) {
-    return new Response(JSON.stringify({ tenant: existingMembership.tenants }), {
+    const { data: widgets, error: widgetsError } = await service
+      .from("widgets")
+      .select("id, name, site_key, allowed_origins")
+      .eq("tenant_id", existingMembership.tenant_id)
+      .order("created_at", { ascending: true });
+    if (widgetsError) {
+      return new Response(JSON.stringify({ error: "lookup failed" }), { status: 500 });
+    }
+    return new Response(JSON.stringify({ tenant: existingMembership.tenants, widget: widgets?.[0] ?? null }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -44,7 +55,7 @@ export async function handleTenantProvision(request: Request, env: Env): Promise
   const { data: tenant, error: tenantError } = await service
     .from("tenants")
     .insert({ name: defaultName })
-    .select("id, name, site_key, allowed_origins")
+    .select("id, name")
     .single();
   if (tenantError || !tenant) {
     return new Response(JSON.stringify({ error: "failed to create tenant" }), { status: 500 });
@@ -59,7 +70,16 @@ export async function handleTenantProvision(request: Request, env: Env): Promise
     return new Response(JSON.stringify({ error: "failed to attach owner" }), { status: 500 });
   }
 
-  return new Response(JSON.stringify({ tenant }), {
+  const { data: widget, error: widgetError } = await service
+    .from("widgets")
+    .insert({ tenant_id: tenant.id })
+    .select("id, name, site_key, allowed_origins")
+    .single();
+  if (widgetError || !widget) {
+    return new Response(JSON.stringify({ error: "failed to create default widget" }), { status: 500 });
+  }
+
+  return new Response(JSON.stringify({ tenant, widget }), {
     status: 201,
     headers: { "Content-Type": "application/json" },
   });

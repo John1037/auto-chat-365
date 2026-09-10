@@ -1,6 +1,6 @@
 import { requireSession, wireSignOut } from "./authGuard";
 
-interface Tenant {
+interface Widget {
   id: string;
   name: string;
   site_key: string;
@@ -23,9 +23,10 @@ async function main() {
       headers: { Authorization: `Bearer ${context.session.access_token}` },
     });
     if (!response.ok) throw new Error(`provisioning failed (${response.status})`);
-    const { tenant } = (await response.json()) as { tenant: Tenant };
+    const { widget } = (await response.json()) as { widget: Widget };
+    if (!widget) throw new Error("no widget found for this tenant");
 
-    snippetEl.textContent = `<script src="${location.origin}/widget.js" data-site-key="${tenant.site_key}" data-position="bottom-right" async><\/script>`;
+    snippetEl.textContent = `<script src="${location.origin}/widget.js" data-site-key="${widget.site_key}" data-position="bottom-right" async><\/script>`;
 
     loadingEl.hidden = true;
     contentEl.hidden = false;

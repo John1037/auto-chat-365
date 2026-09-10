@@ -6,9 +6,13 @@
 -- exercise real semantic retrieval quality (that's what M2's ingest-document +
 -- OpenAI-backed test is for).
 
-insert into tenants (id, name, site_key, allowed_origins) values
-  ('11111111-1111-1111-1111-111111111111', 'Tenant A Demo Co', 'sk_live_demo_tenant_a', '{http://localhost:8080}'),
-  ('22222222-2222-2222-2222-222222222222', 'Tenant B Demo Co', 'sk_live_demo_tenant_b', '{http://localhost:8080}');
+insert into tenants (id, name) values
+  ('11111111-1111-1111-1111-111111111111', 'Tenant A Demo Co'),
+  ('22222222-2222-2222-2222-222222222222', 'Tenant B Demo Co');
+
+insert into widgets (id, tenant_id, name, site_key, allowed_origins) values
+  ('a1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'Default widget', 'sk_live_demo_tenant_a', '{http://localhost:8080}'),
+  ('b2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'Default widget', 'sk_live_demo_tenant_b', '{http://localhost:8080}');
 
 -- Minimal anonymous auth.users rows, mirroring what signInAnonymously() would create.
 -- widget_sessions.id must reference a real auth.users row (see 0001_core_schema.sql).
@@ -32,9 +36,9 @@ insert into auth.users (
     now(), now()
   );
 
-insert into widget_sessions (id, tenant_id, origin) values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'http://localhost:8080'),
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'http://localhost:8080');
+insert into widget_sessions (id, tenant_id, widget_id, origin) values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'a1111111-1111-1111-1111-111111111111', 'http://localhost:8080'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'b2222222-2222-2222-2222-222222222222', 'http://localhost:8080');
 
 insert into conversations (id, tenant_id, session_id) values
   ('c1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),

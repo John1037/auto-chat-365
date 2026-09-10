@@ -7,11 +7,12 @@ interface SessionStartBody {
   site_key?: string;
 }
 
-// Mints a fresh anonymous visitor session scoped to one tenant. This is the *initial*
-// mint only -- once the widget holds a refresh_token, resuming the session across page
-// loads is the widget's own job via supabase-js's normal refresh flow, not another
-// call to this route. Keeping those concerns separate avoids a half-built "resume via
-// server" path that would just re-implement what supabase-js already does client-side.
+// Mints a fresh anonymous visitor session scoped to one widget (and, denormalized,
+// its tenant). This is the *initial* mint only -- once the widget holds a
+// refresh_token, resuming the session across page loads is the widget's own job via
+// supabase-js's normal refresh flow, not another call to this route. Keeping those
+// concerns separate avoids a half-built "resume via server" path that would just
+// re-implement what supabase-js already does client-side.
 export async function handleSessionStart(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -35,27 +36,35 @@ export async function handleSessionStart(request: Request, env: Env): Promise<Re
 
   const service = getServiceClient(env);
 
-  const { data: tenant, error: tenantError } = await service
-    .from("tenants")
-    .select("id, allowed_origins, is_active, rate_limit_per_minute")
+  const { data: widget, error: widgetError } = await service
+    .from("widgets")
+    .select("id, tenant_id, allowed_origins, rate_limit_per_minute, tenants!inner(is_active)")
     .eq("site_key", siteKey)
     .maybeSingle();
 
-  if (tenantError) {
+  if (widgetError) {
     return new Response(JSON.stringify({ error: "lookup failed" }), { status: 500 });
   }
-  if (!tenant || !tenant.is_active) {
-    return new Response(JSON.stringify({ error: "unknown or inactive tenant" }), { status: 404 });
+  const tenant = widget?.tenants as unknown as { is_active: boolean } | undefined;
+  if (!widget || !tenant?.is_active) {
+    return new Response(JSON.stringify({ error: "unknown or inactive widget" }), { status: 404 });
   }
 
-  if (!isOriginAllowed(origin, tenant.allowed_origins)) {
-    return new Response(JSON.stringify({ error: "origin not allowed for this tenant" }), {
+  if (!isOriginAllowed(origin, widget.allowed_origins)) {
+    return new Response(JSON.stringify({ error: "origin not allowed for this widget" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  const withinLimit = await checkRateLimit(service, tenant.id, "tenant", "session-start", 60, tenant.rate_limit_per_minute);
+  const withinLimit = await checkRateLimit(
+    service,
+    widget.tenant_id,
+    "tenant",
+    `session-start:${widget.id}`,
+    60,
+    widget.rate_limit_per_minute,
+  );
   if (!withinLimit) {
     const resp = new Response(JSON.stringify({ error: "rate limit exceeded" }), {
       status: 429,
@@ -78,7 +87,8 @@ export async function handleSessionStart(request: Request, env: Env): Promise<Re
 
   const { error: upsertError } = await service.from("widget_sessions").insert({
     id: signInData.user.id,
-    tenant_id: tenant.id,
+    tenant_id: widget.tenant_id,
+    widget_id: widget.id,
     origin,
     user_agent: request.headers.get("User-Agent"),
   });
