@@ -5,6 +5,7 @@ import { handleChat } from "./routes/chat";
 import { handleIngestDocument } from "./routes/ingest-document";
 import { handleDeleteDocument } from "./routes/delete-document";
 import { handleUpdateDocument } from "./routes/update-document";
+import { handleUpdateDocumentVisibility } from "./routes/update-document-visibility";
 import { handleReembedDocument } from "./routes/reembed-document";
 import { handleTenantProvision } from "./routes/tenant-provision";
 import { handleCreateWidget } from "./routes/create-widget";
@@ -39,6 +40,8 @@ export default {
           return handleDeleteDocument(request, env);
         case "/api/update-document":
           return handleUpdateDocument(request, env);
+        case "/api/update-document-visibility":
+          return handleUpdateDocumentVisibility(request, env);
         case "/api/reembed-document":
           return handleReembedDocument(request, env);
         case "/api/tenant-provision":

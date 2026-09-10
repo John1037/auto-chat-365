@@ -73,6 +73,25 @@
     </form>
   </dialog>
 
+  <dialog class="edit-dialog" id="visibility-dialog">
+    <form id="visibility-form">
+      <p>Which widgets can this document answer questions for?</p>
+      <label class="radio-label">
+        <input type="radio" name="visibility-scope" value="global" id="visibility-global" />
+        All widgets
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="visibility-scope" value="selected" id="visibility-selected" />
+        Only selected widgets
+      </label>
+      <div id="visibility-widget-list" class="checkbox-list"></div>
+      <div class="dialog-actions">
+        <button type="button" class="topbar-link" id="visibility-cancel">Cancel</button>
+        <button type="submit" class="button">Save</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module" src="/knowledge-base-review.js"></script>
 </body>
 </html>
