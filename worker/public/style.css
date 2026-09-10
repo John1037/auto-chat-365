@@ -213,6 +213,20 @@ body.app {
 .sidebar-item a:hover,
 .sidebar-item a.active { color: var(--signal); }
 
+.sidebar-widget-link {
+  display: block;
+  padding: 0.4rem 0.75rem 0.4rem 2.75rem;
+  font-size: 0.82rem;
+  text-decoration: none;
+  color: var(--ash);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-widget-link:hover,
+.sidebar-widget-link.active { color: var(--signal); }
+
 .workspace {
   flex: 1;
   margin-left: 220px;

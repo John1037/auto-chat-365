@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireSession, wireSignOut } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
 
 interface TenantDocument {
   id: string;
@@ -123,6 +123,7 @@ async function main() {
   const context = await requireSession();
   if (!context) return;
   wireSignOut();
+  populateSidebarWidgets(context.supabase);
   accessToken = context.session.access_token;
 
   await loadDocuments(context.supabase);

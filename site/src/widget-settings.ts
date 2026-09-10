@@ -1,4 +1,4 @@
-import { requireSession, wireSignOut } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
 
 interface WidgetRow {
   id: string;
@@ -40,6 +40,7 @@ async function main() {
   const context = await requireSession();
   if (!context) return;
   wireSignOut();
+  populateSidebarWidgets(context.supabase);
 
   const widgetId = new URLSearchParams(location.search).get("id");
   if (!widgetId) {
@@ -100,6 +101,7 @@ async function main() {
     }
     headingEl.textContent = nameInput.value.trim();
     saveStatusEl.textContent = "Saved.";
+    populateSidebarWidgets(context.supabase); // reflect a renamed widget in the sidebar list
   });
 }
 

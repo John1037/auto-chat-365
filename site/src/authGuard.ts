@@ -55,6 +55,34 @@ export async function requireSiteAdmin(): Promise<AuthedContext | null> {
   return context;
 }
 
+// Populates the Widgets section's live sub-list in the sidebar (every widget by
+// name, newest first) -- present on every authenticated page, not just the widgets
+// pages themselves, so a tenant can jump straight to any widget's settings from
+// wherever they are. Shared here (like wireSignOut) rather than duplicated per
+// page-script.
+export async function populateSidebarWidgets(supabase: SupabaseClient): Promise<void> {
+  const container = document.querySelector<HTMLElement>("#sidebar-widget-list");
+  if (!container) return;
+
+  const { data } = await supabase
+    .from("widgets")
+    .select("id, name")
+    .order("created_at", { ascending: false });
+
+  const currentId = new URLSearchParams(location.search).get("id");
+  const onSettingsPage = location.pathname === "/widget-settings.html";
+
+  container.innerHTML = "";
+  for (const widget of data ?? []) {
+    const link = document.createElement("a");
+    link.className = "sidebar-widget-link";
+    link.href = `/widget-settings.html?id=${widget.id}`;
+    link.textContent = widget.name;
+    if (onSettingsPage && widget.id === currentId) link.classList.add("active");
+    container.appendChild(link);
+  }
+}
+
 // Wires the #sign-out link present on every authenticated page's top bar. Shared
 // rather than duplicated per page-script, since app-shell.ts (dashboard/settings/
 // knowledge-base-analysis) and the other Knowledge Base pages (which need their own

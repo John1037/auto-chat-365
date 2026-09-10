@@ -1,4 +1,4 @@
-import { requireSession, wireSignOut } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
 
 interface Widget {
   id: string;
@@ -43,6 +43,7 @@ async function main() {
   const context = await requireSession();
   if (!context) return;
   wireSignOut();
+  populateSidebarWidgets(context.supabase);
 
   try {
     // Idempotent get-or-create -- guarantees this tenant (and its default widget)

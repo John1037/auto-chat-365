@@ -1,4 +1,4 @@
-import { requireSession, wireSignOut } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
 
 const form = document.querySelector<HTMLFormElement>("#embed-form")!;
 const titleInput = document.querySelector<HTMLInputElement>("#doc-title-input")!;
@@ -10,6 +10,7 @@ async function main() {
   const context = await requireSession();
   if (!context) return;
   wireSignOut();
+  populateSidebarWidgets(context.supabase);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
