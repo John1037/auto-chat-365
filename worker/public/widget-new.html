@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Settings — AutoChat 365</title>
+  <title>New Widget — AutoChat 365</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -33,10 +33,10 @@
   </header>
   <div class="app-shell">
     <nav class="sidebar">
-      <details class="sidebar-item">
+      <details class="sidebar-item" open>
         <summary>Widgets</summary>
         <a href="/dashboard.html">All widgets</a>
-        <a href="/widget-new.html">New widget</a>
+        <a href="/widget-new.html" class="active">New widget</a>
       </details>
       <details class="sidebar-item">
         <summary>Knowledge Base</summary>
@@ -44,16 +44,23 @@
         <a href="/knowledge-base-embed.html">Embed Document</a>
         <a href="/knowledge-base-analysis.html">Analysis</a>
       </details>
-      <details class="sidebar-item" open>
+      <details class="sidebar-item">
         <summary>Settings</summary>
-        <a href="/settings.html" class="active">Overview</a>
+        <a href="/settings.html">Overview</a>
       </details>
     </nav>
     <main class="workspace">
-      <h1>Settings</h1>
-      <p>Coming soon.</p>
+      <h1>New widget</h1>
+      <p>Give it a name to tell it apart from your others -- you can change everything else, including this, after it's created.</p>
+      <form id="new-widget-form">
+        <label>Widget name
+          <input type="text" id="widget-name-input" placeholder="Default widget" />
+        </label>
+        <button class="button" type="submit">Create widget</button>
+      </form>
+      <p class="status" id="status"></p>
     </main>
   </div>
-  <script type="module" src="/app-shell.js"></script>
+  <script type="module" src="/widget-new.js"></script>
 </body>
 </html>

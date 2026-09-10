@@ -1,5 +1,6 @@
 import { createWidget } from "./ui";
 import { sendMessage } from "./api";
+import { fetchDisplayConfig } from "./config";
 
 // document.currentScript is only valid during this script's own synchronous
 // execution. The embed snippet uses `async`, so init() below may not run until
@@ -8,7 +9,7 @@ import { sendMessage } from "./api";
 // Capture it now, at the top level, before any deferral.
 const scriptEl = document.currentScript as HTMLScriptElement | null;
 
-function init() {
+async function init() {
   if (!scriptEl) return; // can't self-locate (e.g. dynamically injected without keeping a reference) -- nothing safe to do
 
   const siteKey = scriptEl.dataset.siteKey;
@@ -17,10 +18,13 @@ function init() {
     return;
   }
 
-  const position = scriptEl.dataset.position === "bottom-left" ? "bottom-left" : "bottom-right";
   const apiBase = new URL(scriptEl.src).origin;
+  // Position/color/title live on the widget's own settings now (see the dashboard's
+  // Widgets section), not the embed snippet -- a tenant can change them without
+  // touching their own site's HTML.
+  const config = await fetchDisplayConfig(apiBase, siteKey);
 
-  const widget = createWidget(position);
+  const widget = createWidget(config);
 
   widget.onSend(async (message) => {
     widget.addMessage("user", message);

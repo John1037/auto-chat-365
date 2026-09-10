@@ -1,12 +1,20 @@
-export function widgetCss(position: "bottom-left" | "bottom-right"): string {
-  const side = position === "bottom-left" ? "left" : "right";
+export interface WidgetDisplayConfig {
+  position: "bottom-left" | "bottom-right";
+  offsetX: number;
+  offsetY: number;
+  accentColor: string;
+}
+
+export function widgetCss(config: WidgetDisplayConfig): string {
+  const side = config.position === "bottom-left" ? "left" : "right";
+  const { offsetX, offsetY, accentColor } = config;
   return `
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
     .launcher {
       position: fixed;
-      ${side}: 20px;
-      bottom: 20px;
+      ${side}: ${offsetX}px;
+      bottom: ${offsetY}px;
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -23,8 +31,8 @@ export function widgetCss(position: "bottom-left" | "bottom-right"): string {
 
     .panel {
       position: fixed;
-      ${side}: 20px;
-      bottom: 90px;
+      ${side}: ${offsetX}px;
+      bottom: ${offsetY + 70}px;
       width: 340px;
       max-width: calc(100vw - 40px);
       height: 480px;
@@ -82,7 +90,7 @@ export function widgetCss(position: "bottom-left" | "bottom-right"): string {
       white-space: pre-wrap;
       word-break: break-word;
     }
-    .bubble.user { align-self: flex-end; background: #468ad0; color: #141a1b; }
+    .bubble.user { align-self: flex-end; background: ${accentColor}; color: #141a1b; }
     .bubble.assistant { align-self: flex-start; background: #1a2022; color: #eef2f2; border: 1px solid #2c3436; }
     .bubble.typing { align-self: flex-start; color: #93a1a3; font-style: italic; font-size: 13px; }
 
@@ -112,9 +120,9 @@ export function widgetCss(position: "bottom-left" | "bottom-right"): string {
       min-width: 0;
     }
     .input-row input::placeholder { color: #93a1a3; }
-    .input-row input:focus { outline: 1px solid #468ad0; }
+    .input-row input:focus { outline: 1px solid ${accentColor}; }
     .input-row button {
-      background: #468ad0;
+      background: ${accentColor};
       border: none;
       border-radius: 8px;
       width: 36px;

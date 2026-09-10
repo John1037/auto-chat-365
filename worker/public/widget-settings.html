@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Widgets — AutoChat 365</title>
+  <title>Widget Settings — AutoChat 365</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -35,7 +35,7 @@
     <nav class="sidebar">
       <details class="sidebar-item" open>
         <summary>Widgets</summary>
-        <a href="/dashboard.html" class="active">All widgets</a>
+        <a href="/dashboard.html">All widgets</a>
         <a href="/widget-new.html">New widget</a>
       </details>
       <details class="sidebar-item">
@@ -50,14 +50,50 @@
       </details>
     </nav>
     <main class="workspace">
-      <h1>All widgets</h1>
-      <p><a href="/widget-new.html" class="button">New widget</a></p>
+      <h1 id="page-heading">Widget settings</h1>
       <p id="loading">Loading...</p>
-      <p id="error" class="status error" hidden>Something went wrong loading your widgets. Try refreshing.</p>
-      <p id="widget-empty" hidden>No widgets yet. Create your first one to get an embed snippet.</p>
-      <div class="widget-list" id="widget-list" hidden></div>
+      <p id="error" class="status error" hidden>Couldn't find that widget.</p>
+      <div id="content" hidden>
+        <form id="settings-form">
+          <label>Widget name <span class="field-hint">(shown to you, not visitors)</span>
+            <input type="text" id="name-input" required />
+          </label>
+          <label>Chatbot name <span class="field-hint">(shown to visitors -- not used yet)</span>
+            <input type="text" id="chatbot-name-input" placeholder="Assistant" />
+          </label>
+          <label>Chat title <span class="field-hint">(replaces "Chat with us")</span>
+            <input type="text" id="chat-title-input" required />
+          </label>
+          <label>Color scheme
+            <input type="color" id="color-input" />
+          </label>
+          <div class="field-row">
+            <label>Position
+              <select id="position-input">
+                <option value="bottom-right">Bottom right</option>
+                <option value="bottom-left">Bottom left</option>
+              </select>
+            </label>
+            <label>Horizontal offset (px)
+              <input type="number" id="offset-x-input" min="0" max="400" required />
+            </label>
+            <label>Vertical offset (px)
+              <input type="number" id="offset-y-input" min="0" max="400" required />
+            </label>
+          </div>
+          <label>Allowed origins <span class="field-hint">(one per line, e.g. https://example.com)</span>
+            <textarea id="origins-input" rows="4"></textarea>
+          </label>
+          <button class="button" type="submit">Save settings</button>
+          <p class="status" id="save-status"></p>
+        </form>
+
+        <h2>Embed snippet</h2>
+        <p>Add this to your website to embed this widget:</p>
+        <pre class="snippet" id="embed-snippet"></pre>
+      </div>
     </main>
   </div>
-  <script type="module" src="/widgets.js"></script>
+  <script type="module" src="/widget-settings.js"></script>
 </body>
 </html>

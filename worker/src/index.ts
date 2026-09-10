@@ -7,6 +7,8 @@ import { handleDeleteDocument } from "./routes/delete-document";
 import { handleUpdateDocument } from "./routes/update-document";
 import { handleReembedDocument } from "./routes/reembed-document";
 import { handleTenantProvision } from "./routes/tenant-provision";
+import { handleCreateWidget } from "./routes/create-widget";
+import { handleWidgetConfig } from "./routes/widget-config";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -41,6 +43,10 @@ export default {
           return handleReembedDocument(request, env);
         case "/api/tenant-provision":
           return handleTenantProvision(request, env);
+        case "/api/create-widget":
+          return handleCreateWidget(request, env);
+        case "/api/widget-config":
+          return handleWidgetConfig(request, env);
         default:
           return new Response("Not found", { status: 404 });
       }

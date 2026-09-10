@@ -7,6 +7,8 @@ worker/public/widget.js
 worker/public/login.js
 worker/public/app-shell.js
 worker/public/widgets.js
+worker/public/widget-new.js
+worker/public/widget-settings.js
 worker/public/knowledge-base-review.js
 worker/public/knowledge-base-embed.js
 

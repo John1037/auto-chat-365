@@ -368,6 +368,67 @@ pre.snippet {
   overflow-y: auto;
 }
 
+/* Widgets: All widgets list */
+.widget-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+
+.widget-card {
+  display: block;
+  background: rgba(26, 32, 34, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  text-decoration: none;
+}
+
+.widget-card:hover { border-color: var(--signal); }
+
+.widget-card-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--paper);
+  margin: 0 0 0.4rem;
+}
+
+.widget-card-origins {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--ash);
+  margin: 0.4rem 0 0;
+  overflow-wrap: break-word;
+}
+
+/* Widget settings form */
+.field-hint { font-weight: 400; color: var(--ash); font-size: 0.8rem; }
+
+.field-row { display: flex; gap: 1rem; }
+.field-row label { flex: 1; }
+
+input[type="color"] {
+  display: block;
+  width: 4rem;
+  height: 2.4rem;
+  padding: 0.2rem;
+  margin: 0.75rem 0;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+select {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  margin: 0.75rem 0;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  font-family: 'Karla', sans-serif;
+  background: var(--surface);
+  color: var(--paper);
+}
+
 .edit-dialog {
   background: var(--surface);
   color: var(--paper);

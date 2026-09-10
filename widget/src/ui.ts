@@ -1,4 +1,4 @@
-import { widgetCss, LOGO_SVG, CLOSE_ICON, SEND_ICON } from "./styles";
+import { widgetCss, LOGO_SVG, CLOSE_ICON, SEND_ICON, type WidgetDisplayConfig } from "./styles";
 
 export interface Widget {
   addMessage(role: "user" | "assistant", text: string): void;
@@ -7,13 +7,13 @@ export interface Widget {
   onSend(handler: (message: string) => void): void;
 }
 
-export function createWidget(position: "bottom-left" | "bottom-right"): Widget {
+export function createWidget(config: WidgetDisplayConfig & { chatTitle: string }): Widget {
   const host = document.createElement("div");
   host.id = "autochat365-widget-root";
   const shadow = host.attachShadow({ mode: "open" });
 
   const style = document.createElement("style");
-  style.textContent = widgetCss(position);
+  style.textContent = widgetCss(config);
   shadow.appendChild(style);
 
   const launcher = document.createElement("button");
@@ -28,7 +28,7 @@ export function createWidget(position: "bottom-left" | "bottom-right"): Widget {
   const header = document.createElement("div");
   header.className = "panel-header";
   const headerTitle = document.createElement("span");
-  headerTitle.textContent = "Chat with us";
+  headerTitle.textContent = config.chatTitle;
   const closeButton = document.createElement("button");
   closeButton.innerHTML = CLOSE_ICON;
   closeButton.setAttribute("aria-label", "Close chat");
