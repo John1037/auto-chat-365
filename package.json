@@ -9,7 +9,7 @@
   "scripts": {
     "build:widget": "npm run build -w widget",
     "build:site": "npm run build -w site",
-    "build": "npm run build:site",
+    "build": "npm run build:widget && npm run build:site",
     "dev:worker": "npm run dev -w worker",
     "dev": "npm run build && npm run dev:worker"
   }

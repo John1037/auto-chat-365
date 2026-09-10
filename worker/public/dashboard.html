@@ -50,9 +50,14 @@
     </nav>
     <main class="workspace">
       <h1>Widgets</h1>
-      <p>Coming soon.</p>
+      <p id="loading">Loading...</p>
+      <p id="error" class="status error" hidden>Something went wrong loading your widget. Try refreshing.</p>
+      <div id="content" hidden>
+        <p>Add this to your website to embed your chatbot:</p>
+        <pre class="snippet" id="embed-snippet"></pre>
+      </div>
     </main>
   </div>
-  <script type="module" src="/app-shell.js"></script>
+  <script type="module" src="/widgets.js"></script>
 </body>
 </html>

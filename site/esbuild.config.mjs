@@ -7,6 +7,7 @@ await build({
   entryPoints: [
     "src/login.ts",
     "src/app-shell.ts",
+    "src/widgets.ts",
     "src/knowledge-base-review.ts",
     "src/knowledge-base-embed.ts",
   ],
@@ -17,4 +18,4 @@ await build({
   outdir: "../worker/public",
 });
 
-console.log("site: built login.js, app-shell.js, knowledge-base-review.js, knowledge-base-embed.js -> worker/public/");
+console.log("site: built login.js, app-shell.js, widgets.js, knowledge-base-review.js, knowledge-base-embed.js -> worker/public/");

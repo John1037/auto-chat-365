@@ -6,6 +6,7 @@ widget/dist/
 worker/public/widget.js
 worker/public/login.js
 worker/public/app-shell.js
+worker/public/widgets.js
 worker/public/knowledge-base-review.js
 worker/public/knowledge-base-embed.js
 
