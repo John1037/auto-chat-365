@@ -239,7 +239,9 @@ body.app {
 
 .button:disabled { opacity: 0.5; cursor: default; }
 
-input[type="email"] {
+input[type="email"],
+input[type="text"],
+textarea {
   display: block;
   width: 100%;
   padding: 0.6rem 0.75rem;
@@ -251,6 +253,10 @@ input[type="email"] {
   background: var(--surface);
   color: var(--paper);
 }
+
+textarea { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; resize: vertical; }
+
+label { display: block; font-size: 0.85rem; color: var(--ash); margin-bottom: 1rem; }
 
 .status { min-height: 1.5rem; color: var(--ash); }
 .status.error { color: #e0806f; }
@@ -267,5 +273,112 @@ pre.snippet {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* Knowledge Base: Review Documents */
+.doc-list { display: grid; gap: 1rem; margin-top: 1.5rem; }
+
+.doc-actions { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; }
+
+.icon-btn {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  color: var(--ash);
+  cursor: pointer;
+}
+
+.icon-btn svg { width: 15px; height: 15px; }
+
+.icon-btn:hover { color: var(--paper); border-color: var(--signal); }
+
+.icon-btn[data-tooltip]:hover::after,
+.icon-btn[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  color: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.55rem;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.doc-card {
+  background: rgba(26, 32, 34, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+}
+
+.doc-card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+.doc-title {
+  font-size: 1rem;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 28rem;
+}
+
+.doc-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.status-ready { background: rgba(70, 138, 208, 0.18); color: var(--signal); }
+.status-pending, .status-processing { background: rgba(147, 161, 163, 0.18); color: var(--ash); }
+.status-stale { background: rgba(224, 128, 111, 0.15); color: #e0806f; }
+.status-error { background: rgba(224, 128, 111, 0.28); color: #e0806f; }
+
+.doc-meta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ash);
+  margin: 0.4rem 0;
+}
+
+.doc-sample { font-size: 0.9rem; color: var(--ash); margin: 0.4rem 0 0; }
+
+.doc-full {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.88rem;
+  color: var(--paper);
+  white-space: pre-wrap;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.edit-dialog {
+  background: var(--surface);
+  color: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  width: min(640px, 90vw);
+}
+
+.edit-dialog::backdrop { background: rgba(6, 8, 9, 0.7); }
+
+.dialog-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem; }
 
 [hidden] { display: none !important; }

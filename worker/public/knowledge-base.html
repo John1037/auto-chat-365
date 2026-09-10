@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Knowledge Base — AutoChat 365</title>
+  <title>Review Documents — AutoChat 365</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -39,7 +39,9 @@
       </details>
       <details class="sidebar-item" open>
         <summary>Knowledge Base</summary>
-        <a href="/knowledge-base.html" class="active">Overview</a>
+        <a href="/knowledge-base.html" class="active">Review Documents</a>
+        <a href="/knowledge-base-embed.html">Embed Document</a>
+        <a href="/knowledge-base-analysis.html">Analysis</a>
       </details>
       <details class="sidebar-item">
         <summary>Settings</summary>
@@ -47,10 +49,28 @@
       </details>
     </nav>
     <main class="workspace">
-      <h1>Knowledge Base</h1>
-      <p>Coming soon.</p>
+      <h1>Review Documents</h1>
+      <p><a href="/knowledge-base-embed.html" class="button">Embed a document</a></p>
+      <p id="doc-empty" hidden>No documents yet. Embed your first one to get started.</p>
+      <div class="doc-list" id="doc-list"></div>
     </main>
   </div>
-  <script type="module" src="/app-shell.js"></script>
+
+  <dialog class="edit-dialog" id="edit-dialog">
+    <form id="edit-form">
+      <label>Title
+        <input type="text" id="edit-title" required />
+      </label>
+      <label>Content
+        <textarea id="edit-content" rows="14" required></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="topbar-link" id="edit-cancel">Cancel</button>
+        <button type="submit" class="button">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/knowledge-base-review.js"></script>
 </body>
 </html>

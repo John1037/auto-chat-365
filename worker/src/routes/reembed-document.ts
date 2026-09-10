@@ -3,12 +3,11 @@ import { getServiceClient, getVerifiedUser, getBearerToken } from "../lib/supaba
 import { getOwnerTenantId } from "../lib/tenantOwner";
 import { embedAndStoreDocument } from "../lib/embedDocument";
 
-interface IngestBody {
-  title?: string;
-  content?: string;
+interface ReembedBody {
+  document_id?: string;
 }
 
-export async function handleIngestDocument(request: Request, env: Env): Promise<Response> {
+export async function handleReembedDocument(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -24,43 +23,35 @@ export async function handleIngestDocument(request: Request, env: Env): Promise<
     return new Response(JSON.stringify({ error: "no tenant found for this account" }), { status: 403 });
   }
 
-  let body: IngestBody;
+  let body: ReembedBody;
   try {
     body = await request.json();
   } catch {
     return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400 });
   }
-  const title = body.title?.trim();
-  const content = body.content?.trim();
-  if (!title || !content) {
-    return new Response(JSON.stringify({ error: "title and content are required" }), { status: 400 });
+  if (!body.document_id) {
+    return new Response(JSON.stringify({ error: "document_id is required" }), { status: 400 });
   }
 
   const service = getServiceClient(env);
 
-  const { data: document, error: insertError } = await service
+  const { data: document, error: fetchError } = await service
     .from("tenant_documents")
-    .insert({
-      tenant_id: tenantId,
-      title,
-      source_type: "text",
-      raw_content: content,
-      status: "processing",
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-  if (insertError || !document) {
-    return new Response(JSON.stringify({ error: "failed to create document" }), { status: 500 });
+    .select("raw_content")
+    .eq("id", body.document_id)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (fetchError || !document || !document.raw_content) {
+    return new Response(JSON.stringify({ error: "document not found" }), { status: 404 });
   }
 
-  const result = await embedAndStoreDocument(env, service, tenantId, document.id, content);
+  const result = await embedAndStoreDocument(env, service, tenantId, body.document_id, document.raw_content);
   if (!result.ok) {
-    return new Response(JSON.stringify({ error: result.error, document_id: document.id }), { status: 502 });
+    return new Response(JSON.stringify({ error: result.error }), { status: 502 });
   }
 
-  return new Response(JSON.stringify({ document_id: document.id }), {
-    status: 201,
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
     headers: { "Content-Type": "application/json" },
   });
 }

@@ -4,6 +4,8 @@ import { handleSessionStart } from "./routes/session-start";
 import { handleChat } from "./routes/chat";
 import { handleIngestDocument } from "./routes/ingest-document";
 import { handleDeleteDocument } from "./routes/delete-document";
+import { handleUpdateDocument } from "./routes/update-document";
+import { handleReembedDocument } from "./routes/reembed-document";
 import { handleTenantProvision } from "./routes/tenant-provision";
 
 export default {
@@ -33,6 +35,10 @@ export default {
           return handleIngestDocument(request, env);
         case "/api/delete-document":
           return handleDeleteDocument(request, env);
+        case "/api/update-document":
+          return handleUpdateDocument(request, env);
+        case "/api/reembed-document":
+          return handleReembedDocument(request, env);
         case "/api/tenant-provision":
           return handleTenantProvision(request, env);
         default:

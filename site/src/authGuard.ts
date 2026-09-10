@@ -54,3 +54,16 @@ export async function requireSiteAdmin(): Promise<AuthedContext | null> {
 
   return context;
 }
+
+// Wires the #sign-out link present on every authenticated page's top bar. Shared
+// rather than duplicated per page-script, since app-shell.ts (dashboard/settings/
+// knowledge-base-analysis) and the other Knowledge Base pages (which need their own
+// scripts for page-specific logic) all need this same handful of lines.
+export function wireSignOut(): void {
+  document.querySelector<HTMLElement>("#sign-out")?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const supabase = await getSupabaseClient();
+    await supabase.auth.signOut();
+    location.href = "/";
+  });
+}

@@ -1,19 +1,13 @@
-import { getSupabaseClient } from "./supabaseClient";
-import { requireSession } from "./authGuard";
+import { requireSession, wireSignOut } from "./authGuard";
 
-// Shared chrome for every authenticated page (dashboard/knowledge-base/settings.html):
-// verifies the session (redirects to /login.html if there isn't one) and wires up
-// sign-out. Page-specific content beyond this shell is each page's own concern.
+// Used by pages with no other page-specific script: dashboard.html, settings.html,
+// knowledge-base-analysis.html. Pages with their own logic (knowledge-base-review.ts,
+// knowledge-base-embed.ts) call requireSession()/wireSignOut() directly instead of
+// also loading this file, so the session check doesn't run twice per page.
 async function main() {
   const context = await requireSession();
   if (!context) return; // already redirected to /login.html
+  wireSignOut();
 }
-
-document.querySelector<HTMLElement>("#sign-out")?.addEventListener("click", async (event) => {
-  event.preventDefault();
-  const supabase = await getSupabaseClient();
-  await supabase.auth.signOut();
-  location.href = "/";
-});
 
 main();
