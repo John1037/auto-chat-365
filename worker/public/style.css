@@ -213,9 +213,15 @@ body.app {
 .sidebar-item a:hover,
 .sidebar-item a.active { color: var(--signal); }
 
+.sidebar-widget-list {
+  margin-left: 1.75rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--line);
+}
+
 .sidebar-widget-link {
   display: block;
-  padding: 0.4rem 0.75rem 0.4rem 2.75rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.5rem;
   font-size: 0.82rem;
   text-decoration: none;
   color: var(--ash);

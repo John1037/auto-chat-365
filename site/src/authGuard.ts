@@ -22,11 +22,14 @@ export async function requireSession(): Promise<AuthedContext | null> {
     return null;
   }
 
-  // Clean a magic-link token/code out of the URL now that the session is
-  // established -- purely cosmetic, but avoids leaving a sensitive-looking fragment
-  // visible/bookmarkable.
-  if (location.hash || location.search) {
-    history.replaceState({}, "", location.pathname);
+  // Clean a magic-link token out of the URL now that the session is established --
+  // purely cosmetic, but avoids leaving a sensitive-looking fragment
+  // visible/bookmarkable. This project's implicit auth flow puts those tokens in the
+  // hash (#access_token=...), never the query string -- stripping location.search too
+  // used to wipe out a page's own params (e.g. widget-settings.html's ?id=) before
+  // that page's own script ever got to read them, since requireSession() runs first.
+  if (location.hash) {
+    history.replaceState({}, "", location.pathname + location.search);
   }
 
   return { supabase, session };
