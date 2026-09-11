@@ -1,4 +1,4 @@
-import type { WidgetDisplayConfig } from "./styles";
+import type { WidgetDisplayConfig, ResolvedTheme } from "./styles";
 
 type FullConfig = WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null };
 
@@ -8,9 +8,22 @@ const DEFAULTS: FullConfig = {
   offsetY: 20,
   accentColor: "#468ad0",
   headerColor: "#0e1213",
+  theme: "dark",
   chatTitle: "Chat with us",
   logoUrl: null,
 };
+
+// "auto" means match the visitor's own OS/browser dark-mode setting
+// (prefers-color-scheme) -- there's no generic way to observe an arbitrary host
+// page's own custom theme toggle instead, only this standard browser-level signal.
+// Resolved once at init, not kept live: if the visitor's OS theme changes while the
+// page is open, the widget won't re-render until next load. Good enough for a chat
+// widget, and far simpler than re-running this on a matchMedia listener.
+function resolveTheme(theme: "light" | "dark" | "auto"): ResolvedTheme {
+  if (theme !== "auto") return theme;
+  const prefersDark = typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
+  return prefersDark ? "dark" : "light";
+}
 
 // Fetched once at init, before session-start -- a visitor who never opens the panel
 // should never cause an anonymous auth user to be minted, so this can't piggyback on
@@ -29,6 +42,7 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       offset_y: number;
       logo_url: string | null;
       header_color: string;
+      theme: "light" | "dark" | "auto";
     };
     return {
       position: data.position === "bottom-left" ? "bottom-left" : "bottom-right",
@@ -36,6 +50,7 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       offsetY: data.offset_y,
       accentColor: data.color_scheme,
       headerColor: data.header_color,
+      theme: resolveTheme(data.theme),
       chatTitle: data.chat_title,
       logoUrl: data.logo_url,
     };

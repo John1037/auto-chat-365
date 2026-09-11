@@ -22,7 +22,7 @@ export async function handleWidgetConfig(request: Request, env: Env): Promise<Re
   const { data: widget, error } = await service
     .from("widgets")
     .select(
-      "allowed_origins, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, logo_url, header_color, tenants!inner(is_active)",
+      "allowed_origins, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, logo_url, header_color, theme, tenants!inner(is_active)",
     )
     .eq("site_key", siteKey)
     .maybeSingle();
@@ -49,6 +49,7 @@ export async function handleWidgetConfig(request: Request, env: Env): Promise<Re
       offset_y: widget.offset_y,
       logo_url: widget.logo_url,
       header_color: widget.header_color,
+      theme: widget.theme,
     }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );

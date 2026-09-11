@@ -13,6 +13,7 @@ interface WidgetRow {
   site_key: string;
   logo_url: string | null;
   header_color: string;
+  theme: "light" | "dark" | "auto";
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -26,6 +27,7 @@ const chatTitleInput = document.querySelector<HTMLInputElement>("#chat-title-inp
 const colorInput = document.querySelector<HTMLInputElement>("#color-input")!;
 const logoUrlInput = document.querySelector<HTMLInputElement>("#logo-url-input")!;
 const headerColorInput = document.querySelector<HTMLInputElement>("#header-color-input")!;
+const themeInput = document.querySelector<HTMLSelectElement>("#theme-input")!;
 const positionInput = document.querySelector<HTMLSelectElement>("#position-input")!;
 const offsetXInput = document.querySelector<HTMLInputElement>("#offset-x-input")!;
 const offsetYInput = document.querySelector<HTMLInputElement>("#offset-y-input")!;
@@ -55,7 +57,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, header_color",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, header_color, theme",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -74,6 +76,7 @@ async function main() {
   colorInput.value = widget.color_scheme;
   logoUrlInput.value = widget.logo_url ?? "";
   headerColorInput.value = widget.header_color;
+  themeInput.value = widget.theme;
   positionInput.value = widget.position;
   offsetXInput.value = String(widget.offset_x);
   offsetYInput.value = String(widget.offset_y);
@@ -97,6 +100,7 @@ async function main() {
         color_scheme: colorInput.value,
         logo_url: logoUrlInput.value.trim() || null,
         header_color: headerColorInput.value,
+        theme: themeInput.value,
         position: positionInput.value,
         offset_x: Number(offsetXInput.value),
         offset_y: Number(offsetYInput.value),

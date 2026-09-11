@@ -1,14 +1,60 @@
+export type ResolvedTheme = "light" | "dark";
+
 export interface WidgetDisplayConfig {
   position: "bottom-left" | "bottom-right";
   offsetX: number;
   offsetY: number;
   accentColor: string;
   headerColor: string;
+  theme: ResolvedTheme;
 }
+
+interface Palette {
+  panelBg: string;
+  panelBorder: string;
+  assistantBubbleBg: string;
+  assistantBubbleText: string;
+  typingColor: string;
+  inputBg: string;
+  inputBorder: string;
+  inputText: string;
+  placeholderColor: string;
+  poweredByColor: string;
+}
+
+// The panel body's own light/dark theme -- independent of the top bar, which keeps
+// its own separately configurable header_color/logo_url regardless of this.
+const PALETTES: Record<ResolvedTheme, Palette> = {
+  dark: {
+    panelBg: "#0e1213",
+    panelBorder: "#2c3436",
+    assistantBubbleBg: "#1a2022",
+    assistantBubbleText: "#eef2f2",
+    typingColor: "#93a1a3",
+    inputBg: "#1a2022",
+    inputBorder: "#2c3436",
+    inputText: "#eef2f2",
+    placeholderColor: "#93a1a3",
+    poweredByColor: "#5c686a",
+  },
+  light: {
+    panelBg: "#ffffff",
+    panelBorder: "#dde2e3",
+    assistantBubbleBg: "#f1f4f5",
+    assistantBubbleText: "#14181a",
+    typingColor: "#6b7677",
+    inputBg: "#f5f7f7",
+    inputBorder: "#d5dadb",
+    inputText: "#14181a",
+    placeholderColor: "#8b9596",
+    poweredByColor: "#9aa3a4",
+  },
+};
 
 export function widgetCss(config: WidgetDisplayConfig): string {
   const side = config.position === "bottom-left" ? "left" : "right";
-  const { offsetX, offsetY, accentColor, headerColor } = config;
+  const { offsetX, offsetY, accentColor, headerColor, theme } = config;
+  const p = PALETTES[theme];
   return `
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
@@ -38,8 +84,8 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       max-width: calc(100vw - 40px);
       height: 480px;
       max-height: calc(100vh - 120px);
-      background: #0e1213;
-      border: 1px solid #2c3436;
+      background: ${p.panelBg};
+      border: 1px solid ${p.panelBorder};
       border-radius: 12px;
       display: flex;
       flex-direction: column;
@@ -54,7 +100,7 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       align-items: center;
       gap: 8px;
       padding: 12px 14px;
-      border-bottom: 1px solid #2c3436;
+      border-bottom: 1px solid ${p.panelBorder};
       background: ${headerColor};
       color: #eef2f2;
       font-weight: 600;
@@ -94,8 +140,8 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       word-break: break-word;
     }
     .bubble.user { align-self: flex-end; background: ${accentColor}; color: #141a1b; }
-    .bubble.assistant { align-self: flex-start; background: #1a2022; color: #eef2f2; border: 1px solid #2c3436; }
-    .bubble.typing { align-self: flex-start; color: #93a1a3; font-style: italic; font-size: 13px; }
+    .bubble.assistant { align-self: flex-start; background: ${p.assistantBubbleBg}; color: ${p.assistantBubbleText}; border: 1px solid ${p.panelBorder}; }
+    .bubble.typing { align-self: flex-start; color: ${p.typingColor}; font-style: italic; font-size: 13px; }
 
     .error-banner {
       padding: 8px 14px;
@@ -108,7 +154,7 @@ export function widgetCss(config: WidgetDisplayConfig): string {
     .powered-by {
       text-align: center;
       font-size: 10px;
-      color: #5c686a;
+      color: ${p.poweredByColor};
       padding: 4px 0;
       flex-shrink: 0;
     }
@@ -117,20 +163,20 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       display: flex;
       gap: 8px;
       padding: 10px;
-      border-top: 1px solid #2c3436;
+      border-top: 1px solid ${p.panelBorder};
       flex-shrink: 0;
     }
     .input-row input {
       flex: 1;
-      background: #1a2022;
-      border: 1px solid #2c3436;
+      background: ${p.inputBg};
+      border: 1px solid ${p.inputBorder};
       border-radius: 8px;
       padding: 8px 10px;
-      color: #eef2f2;
+      color: ${p.inputText};
       font-size: 13.5px;
       min-width: 0;
     }
-    .input-row input::placeholder { color: #93a1a3; }
+    .input-row input::placeholder { color: ${p.placeholderColor}; }
     .input-row input:focus { outline: 1px solid ${accentColor}; }
     .input-row button {
       background: ${accentColor};
