@@ -3,11 +3,12 @@ export interface WidgetDisplayConfig {
   offsetX: number;
   offsetY: number;
   accentColor: string;
+  headerColor: string;
 }
 
 export function widgetCss(config: WidgetDisplayConfig): string {
   const side = config.position === "bottom-left" ? "left" : "right";
-  const { offsetX, offsetY, accentColor } = config;
+  const { offsetX, offsetY, accentColor, headerColor } = config;
   return `
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
@@ -54,12 +55,14 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       gap: 8px;
       padding: 12px 14px;
       border-bottom: 1px solid #2c3436;
+      background: ${headerColor};
       color: #eef2f2;
       font-weight: 600;
       font-size: 14px;
       flex-shrink: 0;
     }
     .panel-header svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .panel-logo { width: 22px; height: 22px; flex-shrink: 0; border-radius: 4px; object-fit: contain; }
     .panel-header span { flex: 1; }
     .panel-header button {
       background: none;
@@ -99,6 +102,14 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       background: rgba(224, 128, 111, 0.15);
       color: #e0806f;
       font-size: 12.5px;
+      flex-shrink: 0;
+    }
+
+    .powered-by {
+      text-align: center;
+      font-size: 10px;
+      color: #5c686a;
+      padding: 4px 0;
       flex-shrink: 0;
     }
 

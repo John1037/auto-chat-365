@@ -65,9 +65,17 @@
           <label>Chat title <span class="field-hint">(replaces "Chat with us")</span>
             <input type="text" id="chat-title-input" required />
           </label>
-          <label>Color scheme
-            <input type="color" id="color-input" />
+          <label>Header logo <span class="field-hint">(image URL -- replaces the default mark in the widget's top bar)</span>
+            <input type="text" id="logo-url-input" placeholder="https://example.com/logo.png" />
           </label>
+          <div class="field-row">
+            <label>Color scheme <span class="field-hint">(accent -- send button, your messages)</span>
+              <input type="color" id="color-input" />
+            </label>
+            <label>Top bar background
+              <input type="color" id="header-color-input" />
+            </label>
+          </div>
           <div class="field-row">
             <label>Position
               <select id="position-input">

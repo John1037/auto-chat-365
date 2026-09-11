@@ -7,7 +7,7 @@ export interface Widget {
   onSend(handler: (message: string) => void): void;
 }
 
-export function createWidget(config: WidgetDisplayConfig & { chatTitle: string }): Widget {
+export function createWidget(config: WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null }): Widget {
   const host = document.createElement("div");
   host.id = "autochat365-widget-root";
   const shadow = host.attachShadow({ mode: "open" });
@@ -32,7 +32,15 @@ export function createWidget(config: WidgetDisplayConfig & { chatTitle: string }
   const closeButton = document.createElement("button");
   closeButton.innerHTML = CLOSE_ICON;
   closeButton.setAttribute("aria-label", "Close chat");
-  header.innerHTML = LOGO_SVG;
+  if (config.logoUrl) {
+    const logo = document.createElement("img");
+    logo.className = "panel-logo";
+    logo.src = config.logoUrl;
+    logo.alt = "";
+    header.appendChild(logo);
+  } else {
+    header.innerHTML = LOGO_SVG;
+  }
   header.append(headerTitle, closeButton);
 
   const messages = document.createElement("div");
@@ -41,6 +49,10 @@ export function createWidget(config: WidgetDisplayConfig & { chatTitle: string }
   const errorBanner = document.createElement("div");
   errorBanner.className = "error-banner";
   errorBanner.hidden = true;
+
+  const poweredBy = document.createElement("div");
+  poweredBy.className = "powered-by";
+  poweredBy.textContent = "Powered by 365 Applications";
 
   const inputRow = document.createElement("form");
   inputRow.className = "input-row";
@@ -54,7 +66,7 @@ export function createWidget(config: WidgetDisplayConfig & { chatTitle: string }
   sendButton.setAttribute("aria-label", "Send");
   inputRow.append(input, sendButton);
 
-  panel.append(header, messages, errorBanner, inputRow);
+  panel.append(header, messages, errorBanner, poweredBy, inputRow);
 
   launcher.addEventListener("click", () => {
     panel.hidden = !panel.hidden;
