@@ -318,6 +318,12 @@ label { display: block; font-size: 0.85rem; color: var(--ash); margin-bottom: 1r
 .status { min-height: 1.5rem; color: var(--ash); }
 .status.error { color: #e0806f; }
 
+/* Sits inline in a flex row (e.g. next to an upload/remove button) instead of
+   reserving its own block-level line below -- no min-height/margin to collapse to
+   nothing when empty, and align-items: center on the row centers it against the
+   button regardless of its own height. */
+.status-inline { min-height: 0; margin: 0; font-size: 0.85rem; }
+
 pre.snippet {
   background: var(--surface-2);
   border: 1px solid var(--line);
