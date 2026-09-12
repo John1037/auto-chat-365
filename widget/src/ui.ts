@@ -7,7 +7,9 @@ export interface Widget {
   onSend(handler: (message: string) => void): void;
 }
 
-export function createWidget(config: WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null }): Widget {
+export function createWidget(
+  config: WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null; greetingMessage: string },
+): Widget {
   const host = document.createElement("div");
   host.id = "autochat365-widget-root";
   const shadow = host.attachShadow({ mode: "open" });
@@ -68,6 +70,21 @@ export function createWidget(config: WidgetDisplayConfig & { chatTitle: string; 
 
   panel.append(header, messages, errorBanner, poweredBy, inputRow);
 
+  function appendMessage(role: "user" | "assistant", text: string): void {
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${role}`;
+    bubble.textContent = text;
+    messages.appendChild(bubble);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // Client-side only -- never sent to the backend or counted as conversation
+  // history. Shown once at init, already waiting the first time a visitor opens the
+  // panel. Tenant can clear the setting to an empty string to disable it entirely.
+  if (config.greetingMessage.trim()) {
+    appendMessage("assistant", config.greetingMessage);
+  }
+
   launcher.addEventListener("click", () => {
     panel.hidden = !panel.hidden;
     if (!panel.hidden) input.focus();
@@ -89,13 +106,7 @@ export function createWidget(config: WidgetDisplayConfig & { chatTitle: string; 
   });
 
   return {
-    addMessage(role, text) {
-      const bubble = document.createElement("div");
-      bubble.className = `bubble ${role}`;
-      bubble.textContent = text;
-      messages.appendChild(bubble);
-      messages.scrollTop = messages.scrollHeight;
-    },
+    addMessage: appendMessage,
     setTyping(typing) {
       const existing = messages.querySelector(".bubble.typing");
       if (typing && !existing) {

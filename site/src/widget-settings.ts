@@ -14,6 +14,7 @@ interface WidgetRow {
   logo_url: string | null;
   header_color: string;
   theme: "light" | "dark" | "auto";
+  greeting_message: string;
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -24,6 +25,7 @@ const form = document.querySelector<HTMLFormElement>("#settings-form")!;
 const nameInput = document.querySelector<HTMLInputElement>("#name-input")!;
 const chatbotNameInput = document.querySelector<HTMLInputElement>("#chatbot-name-input")!;
 const chatTitleInput = document.querySelector<HTMLInputElement>("#chat-title-input")!;
+const greetingInput = document.querySelector<HTMLInputElement>("#greeting-input")!;
 const colorInput = document.querySelector<HTMLInputElement>("#color-input")!;
 const headerColorInput = document.querySelector<HTMLInputElement>("#header-color-input")!;
 const logoPreview = document.querySelector<HTMLImageElement>("#logo-preview")!;
@@ -75,7 +77,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, header_color, theme",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, header_color, theme, greeting_message",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -91,6 +93,7 @@ async function main() {
   nameInput.value = widget.name;
   chatbotNameInput.value = widget.chatbot_name ?? "";
   chatTitleInput.value = widget.chat_title;
+  greetingInput.value = widget.greeting_message;
   colorInput.value = widget.color_scheme;
   headerColorInput.value = widget.header_color;
   showLogo(widget.logo_url);
@@ -115,6 +118,7 @@ async function main() {
         name: nameInput.value.trim(),
         chatbot_name: chatbotNameInput.value.trim() || null,
         chat_title: chatTitleInput.value.trim(),
+        greeting_message: greetingInput.value.trim(),
         color_scheme: colorInput.value,
         header_color: headerColorInput.value,
         theme: themeInput.value,

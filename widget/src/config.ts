@@ -1,6 +1,6 @@
 import type { WidgetDisplayConfig, ResolvedTheme } from "./styles";
 
-type FullConfig = WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null };
+type FullConfig = WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null; greetingMessage: string };
 
 const DEFAULTS: FullConfig = {
   position: "bottom-right",
@@ -11,6 +11,7 @@ const DEFAULTS: FullConfig = {
   theme: "dark",
   chatTitle: "Chat with us",
   logoUrl: null,
+  greetingMessage: "Hi, how can we help?",
 };
 
 // "auto" means match the visitor's own OS/browser dark-mode setting
@@ -43,6 +44,7 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       logo_url: string | null;
       header_color: string;
       theme: "light" | "dark" | "auto";
+      greeting_message: string;
     };
     return {
       position: data.position === "bottom-left" ? "bottom-left" : "bottom-right",
@@ -53,6 +55,7 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       theme: resolveTheme(data.theme),
       chatTitle: data.chat_title,
       logoUrl: data.logo_url,
+      greetingMessage: data.greeting_message,
     };
   } catch {
     return DEFAULTS;
