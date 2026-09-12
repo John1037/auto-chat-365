@@ -25,8 +25,13 @@ const nameInput = document.querySelector<HTMLInputElement>("#name-input")!;
 const chatbotNameInput = document.querySelector<HTMLInputElement>("#chatbot-name-input")!;
 const chatTitleInput = document.querySelector<HTMLInputElement>("#chat-title-input")!;
 const colorInput = document.querySelector<HTMLInputElement>("#color-input")!;
-const logoUrlInput = document.querySelector<HTMLInputElement>("#logo-url-input")!;
 const headerColorInput = document.querySelector<HTMLInputElement>("#header-color-input")!;
+const logoPreview = document.querySelector<HTMLImageElement>("#logo-preview")!;
+const logoEmpty = document.querySelector<HTMLElement>("#logo-empty")!;
+const logoFileInput = document.querySelector<HTMLInputElement>("#logo-file-input")!;
+const logoUploadButton = document.querySelector<HTMLButtonElement>("#logo-upload-button")!;
+const logoRemoveButton = document.querySelector<HTMLButtonElement>("#logo-remove-button")!;
+const logoStatusEl = document.querySelector<HTMLElement>("#logo-status")!;
 const themeInput = document.querySelector<HTMLSelectElement>("#theme-input")!;
 const positionInput = document.querySelector<HTMLSelectElement>("#position-input")!;
 const offsetXInput = document.querySelector<HTMLInputElement>("#offset-x-input")!;
@@ -40,6 +45,19 @@ function parseOrigins(raw: string): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function showLogo(url: string | null): void {
+  if (url) {
+    logoPreview.src = url;
+    logoPreview.hidden = false;
+    logoEmpty.hidden = true;
+    logoRemoveButton.hidden = false;
+  } else {
+    logoPreview.hidden = true;
+    logoEmpty.hidden = false;
+    logoRemoveButton.hidden = true;
+  }
 }
 
 async function main() {
@@ -74,8 +92,8 @@ async function main() {
   chatbotNameInput.value = widget.chatbot_name ?? "";
   chatTitleInput.value = widget.chat_title;
   colorInput.value = widget.color_scheme;
-  logoUrlInput.value = widget.logo_url ?? "";
   headerColorInput.value = widget.header_color;
+  showLogo(widget.logo_url);
   themeInput.value = widget.theme;
   positionInput.value = widget.position;
   offsetXInput.value = String(widget.offset_x);
@@ -98,7 +116,6 @@ async function main() {
         chatbot_name: chatbotNameInput.value.trim() || null,
         chat_title: chatTitleInput.value.trim(),
         color_scheme: colorInput.value,
-        logo_url: logoUrlInput.value.trim() || null,
         header_color: headerColorInput.value,
         theme: themeInput.value,
         position: positionInput.value,
@@ -116,6 +133,55 @@ async function main() {
     headingEl.textContent = nameInput.value.trim();
     saveStatusEl.textContent = "Saved.";
     populateSidebarWidgets(context.supabase); // reflect a renamed widget in the sidebar list
+  });
+
+  logoUploadButton.addEventListener("click", () => logoFileInput.click());
+
+  logoFileInput.addEventListener("change", async () => {
+    const file = logoFileInput.files?.[0];
+    logoFileInput.value = ""; // allow re-selecting the same file later (e.g. after fixing its size)
+    if (!file) return;
+
+    logoStatusEl.textContent = "Uploading...";
+    logoStatusEl.classList.remove("error");
+    logoUploadButton.disabled = true;
+
+    try {
+      const body = new FormData();
+      body.append("widget_id", widgetId);
+      body.append("file", file);
+      const response = await fetch("/api/upload-widget-logo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${context.session.access_token}` },
+        body,
+      });
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `upload failed (${response.status})`);
+      }
+      const { logo_url } = (await response.json()) as { logo_url: string };
+      showLogo(logo_url);
+      logoStatusEl.textContent = "Logo updated.";
+    } catch (err) {
+      logoStatusEl.textContent = err instanceof Error ? err.message : "Something went wrong uploading that logo.";
+      logoStatusEl.classList.add("error");
+    } finally {
+      logoUploadButton.disabled = false;
+    }
+  });
+
+  logoRemoveButton.addEventListener("click", async () => {
+    logoRemoveButton.disabled = true;
+    const { error: removeError } = await context.supabase.from("widgets").update({ logo_url: null }).eq("id", widgetId);
+    logoRemoveButton.disabled = false;
+    if (removeError) {
+      logoStatusEl.textContent = "Something went wrong removing that logo.";
+      logoStatusEl.classList.add("error");
+      return;
+    }
+    showLogo(null);
+    logoStatusEl.textContent = "Logo removed.";
+    logoStatusEl.classList.remove("error");
   });
 }
 

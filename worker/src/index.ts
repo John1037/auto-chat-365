@@ -10,6 +10,7 @@ import { handleReembedDocument } from "./routes/reembed-document";
 import { handleTenantProvision } from "./routes/tenant-provision";
 import { handleCreateWidget } from "./routes/create-widget";
 import { handleWidgetConfig } from "./routes/widget-config";
+import { handleUploadWidgetLogo } from "./routes/upload-widget-logo";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -50,6 +51,8 @@ export default {
           return handleCreateWidget(request, env);
         case "/api/widget-config":
           return handleWidgetConfig(request, env);
+        case "/api/upload-widget-logo":
+          return handleUploadWidgetLogo(request, env);
         default:
           return new Response("Not found", { status: 404 });
       }
