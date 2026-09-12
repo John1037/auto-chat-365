@@ -68,10 +68,12 @@ function wireImageUpload(opts: {
       preview.src = url;
       preview.hidden = false;
       empty.hidden = true;
+      uploadButton.hidden = true;
       removeButton.hidden = false;
     } else {
       preview.hidden = true;
       empty.hidden = false;
+      uploadButton.hidden = false;
       removeButton.hidden = true;
     }
   }

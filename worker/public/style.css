@@ -244,6 +244,26 @@ body.app {
   padding: 4.75rem 2.5rem 3rem;
 }
 
+/* Below this width the fixed sidebar-plus-margin layout leaves too little room for
+   real content (form fields, cards) -- stack the sidebar as a normal-flow block
+   above the workspace instead. .topbar stays fixed either way, so app-shell picks up
+   the top-clearance job the sidebar's own `top` offset was handling before. */
+@media (max-width: 720px) {
+  .app-shell { display: block; padding-top: 4.5rem; }
+  .sidebar {
+    position: static;
+    top: auto;
+    bottom: auto;
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .workspace {
+    margin-left: 0;
+    padding: 1.75rem 1.25rem 3rem;
+  }
+}
+
 .button {
   display: inline-block;
   background: var(--signal);
@@ -436,6 +456,26 @@ pre.snippet {
 }
 
 /* Widget settings form */
+.settings-section {
+  border: 0;
+  border-top: 1px solid var(--line);
+  min-width: 0; /* fieldsets default to a min-content min-width, which can overflow a narrow flex/grid parent */
+  margin: 0 0 1.75rem;
+  padding: 1.75rem 0 0;
+}
+.settings-section:first-of-type { border-top: 0; padding-top: 0; }
+
+.settings-section legend {
+  display: block;
+  width: 100%;
+  padding: 0 0 1rem;
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  color: var(--paper);
+}
+
 .field-hint { font-weight: 400; color: var(--ash); font-size: 0.8rem; }
 
 .field-row { display: flex; gap: 1rem; }
@@ -450,7 +490,11 @@ pre.snippet {
   margin-bottom: 0.5rem;
 }
 
-.logo-upload-row { display: flex; align-items: center; gap: 0.75rem; }
+.logo-upload-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  .field-row { flex-direction: column; gap: 0; }
+}
 
 .logo-preview {
   width: 40px;
