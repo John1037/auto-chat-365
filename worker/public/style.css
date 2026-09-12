@@ -462,6 +462,8 @@ pre.snippet {
   flex-shrink: 0;
 }
 
+.avatar-preview { border-radius: 50%; object-fit: cover; }
+
 input[type="color"] {
   display: block;
   width: 4rem;

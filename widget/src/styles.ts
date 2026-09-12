@@ -137,6 +137,15 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       gap: 8px;
     }
 
+    .sender-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: -4px;
+    }
+    .sender-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sender-name { font-size: 11px; font-weight: 600; color: ${p.typingColor}; }
+
     .bubble {
       max-width: 85%;
       padding: 8px 12px;

@@ -1,6 +1,12 @@
 import type { WidgetDisplayConfig, ResolvedTheme } from "./styles";
 
-type FullConfig = WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null; greetingMessage: string };
+type FullConfig = WidgetDisplayConfig & {
+  chatTitle: string;
+  logoUrl: string | null;
+  greetingMessage: string;
+  chatbotName: string | null;
+  avatarUrl: string | null;
+};
 
 const DEFAULTS: FullConfig = {
   position: "bottom-right",
@@ -12,6 +18,8 @@ const DEFAULTS: FullConfig = {
   chatTitle: "Chat with us",
   logoUrl: null,
   greetingMessage: "Hi, how can we help?",
+  chatbotName: null,
+  avatarUrl: null,
 };
 
 // "auto" means match the visitor's own OS/browser dark-mode setting
@@ -42,9 +50,11 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       offset_x: number;
       offset_y: number;
       logo_url: string | null;
+      avatar_url: string | null;
       header_color: string;
       theme: "light" | "dark" | "auto";
       greeting_message: string;
+      chatbot_name: string | null;
     };
     return {
       position: data.position === "bottom-left" ? "bottom-left" : "bottom-right",
@@ -56,6 +66,8 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       chatTitle: data.chat_title,
       logoUrl: data.logo_url,
       greetingMessage: data.greeting_message,
+      chatbotName: data.chatbot_name,
+      avatarUrl: data.avatar_url,
     };
   } catch {
     return DEFAULTS;

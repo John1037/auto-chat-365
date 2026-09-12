@@ -8,7 +8,13 @@ export interface Widget {
 }
 
 export function createWidget(
-  config: WidgetDisplayConfig & { chatTitle: string; logoUrl: string | null; greetingMessage: string },
+  config: WidgetDisplayConfig & {
+    chatTitle: string;
+    logoUrl: string | null;
+    greetingMessage: string;
+    chatbotName: string | null;
+    avatarUrl: string | null;
+  },
 ): Widget {
   const host = document.createElement("div");
   host.id = "autochat365-widget-root";
@@ -70,7 +76,25 @@ export function createWidget(
 
   panel.append(header, messages, errorBanner, poweredBy, inputRow);
 
+  // Only shown when a tenant has set BOTH -- an avatar with no name (or vice versa)
+  // would be a half-labeled message, which reads as broken rather than intentional.
+  const showSender = Boolean(config.avatarUrl && config.chatbotName);
+
   function appendMessage(role: "user" | "assistant", text: string): void {
+    if (role === "assistant" && showSender) {
+      const senderRow = document.createElement("div");
+      senderRow.className = "sender-row";
+      const avatar = document.createElement("img");
+      avatar.className = "sender-avatar";
+      avatar.src = config.avatarUrl!;
+      avatar.alt = "";
+      const name = document.createElement("span");
+      name.className = "sender-name";
+      name.textContent = config.chatbotName!;
+      senderRow.append(avatar, name);
+      messages.appendChild(senderRow);
+    }
+
     const bubble = document.createElement("div");
     bubble.className = `bubble ${role}`;
     bubble.textContent = text;

@@ -11,6 +11,7 @@ import { handleTenantProvision } from "./routes/tenant-provision";
 import { handleCreateWidget } from "./routes/create-widget";
 import { handleWidgetConfig } from "./routes/widget-config";
 import { handleUploadWidgetLogo } from "./routes/upload-widget-logo";
+import { handleUploadWidgetAvatar } from "./routes/upload-widget-avatar";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -53,6 +54,8 @@ export default {
           return handleWidgetConfig(request, env);
         case "/api/upload-widget-logo":
           return handleUploadWidgetLogo(request, env);
+        case "/api/upload-widget-avatar":
+          return handleUploadWidgetAvatar(request, env);
         default:
           return new Response("Not found", { status: 404 });
       }

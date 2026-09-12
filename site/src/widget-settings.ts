@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
 
 interface WidgetRow {
@@ -12,6 +13,7 @@ interface WidgetRow {
   allowed_origins: string[];
   site_key: string;
   logo_url: string | null;
+  avatar_url: string | null;
   header_color: string;
   theme: "light" | "dark" | "auto";
   greeting_message: string;
@@ -28,12 +30,6 @@ const chatTitleInput = document.querySelector<HTMLInputElement>("#chat-title-inp
 const greetingInput = document.querySelector<HTMLInputElement>("#greeting-input")!;
 const colorInput = document.querySelector<HTMLInputElement>("#color-input")!;
 const headerColorInput = document.querySelector<HTMLInputElement>("#header-color-input")!;
-const logoPreview = document.querySelector<HTMLImageElement>("#logo-preview")!;
-const logoEmpty = document.querySelector<HTMLElement>("#logo-empty")!;
-const logoFileInput = document.querySelector<HTMLInputElement>("#logo-file-input")!;
-const logoUploadButton = document.querySelector<HTMLButtonElement>("#logo-upload-button")!;
-const logoRemoveButton = document.querySelector<HTMLButtonElement>("#logo-remove-button")!;
-const logoStatusEl = document.querySelector<HTMLElement>("#logo-status")!;
 const themeInput = document.querySelector<HTMLSelectElement>("#theme-input")!;
 const positionInput = document.querySelector<HTMLSelectElement>("#position-input")!;
 const offsetXInput = document.querySelector<HTMLInputElement>("#offset-x-input")!;
@@ -49,17 +45,87 @@ function parseOrigins(raw: string): string[] {
     .filter(Boolean);
 }
 
-function showLogo(url: string | null): void {
-  if (url) {
-    logoPreview.src = url;
-    logoPreview.hidden = false;
-    logoEmpty.hidden = true;
-    logoRemoveButton.hidden = false;
-  } else {
-    logoPreview.hidden = true;
-    logoEmpty.hidden = false;
-    logoRemoveButton.hidden = true;
+// Shared by the logo and avatar upload controls -- identical preview/upload/remove
+// behavior, differing only in which elements, API route, and widgets column each uses.
+function wireImageUpload(opts: {
+  prefix: string;
+  uploadUrl: string;
+  responseKey: string;
+  column: "logo_url" | "avatar_url";
+  supabase: SupabaseClient;
+  widgetId: string;
+  accessToken: string;
+}) {
+  const preview = document.querySelector<HTMLImageElement>(`#${opts.prefix}-preview`)!;
+  const empty = document.querySelector<HTMLElement>(`#${opts.prefix}-empty`)!;
+  const fileInput = document.querySelector<HTMLInputElement>(`#${opts.prefix}-file-input`)!;
+  const uploadButton = document.querySelector<HTMLButtonElement>(`#${opts.prefix}-upload-button`)!;
+  const removeButton = document.querySelector<HTMLButtonElement>(`#${opts.prefix}-remove-button`)!;
+  const statusEl = document.querySelector<HTMLElement>(`#${opts.prefix}-status`)!;
+
+  function show(url: string | null) {
+    if (url) {
+      preview.src = url;
+      preview.hidden = false;
+      empty.hidden = true;
+      removeButton.hidden = false;
+    } else {
+      preview.hidden = true;
+      empty.hidden = false;
+      removeButton.hidden = true;
+    }
   }
+
+  uploadButton.addEventListener("click", () => fileInput.click());
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = ""; // allow re-selecting the same file later (e.g. after fixing its size)
+    if (!file) return;
+
+    statusEl.textContent = "Uploading...";
+    statusEl.classList.remove("error");
+    uploadButton.disabled = true;
+
+    try {
+      const body = new FormData();
+      body.append("widget_id", opts.widgetId);
+      body.append("file", file);
+      const response = await fetch(opts.uploadUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${opts.accessToken}` },
+        body,
+      });
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `upload failed (${response.status})`);
+      }
+      const data = (await response.json()) as Record<string, string>;
+      show(data[opts.responseKey]);
+      statusEl.textContent = "Updated.";
+    } catch (err) {
+      statusEl.textContent = err instanceof Error ? err.message : "Something went wrong uploading that image.";
+      statusEl.classList.add("error");
+    } finally {
+      uploadButton.disabled = false;
+    }
+  });
+
+  removeButton.addEventListener("click", async () => {
+    removeButton.disabled = true;
+    const { error: removeError } = await opts.supabase.from("widgets").update({ [opts.column]: null }).eq("id", opts.widgetId);
+    removeButton.disabled = false;
+    if (removeError) {
+      statusEl.textContent = "Something went wrong removing that image.";
+      statusEl.classList.add("error");
+      return;
+    }
+    show(null);
+    statusEl.textContent = "Removed.";
+    statusEl.classList.remove("error");
+  });
+
+  return { show };
 }
 
 async function main() {
@@ -77,7 +143,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, header_color, theme, greeting_message",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -96,13 +162,34 @@ async function main() {
   greetingInput.value = widget.greeting_message;
   colorInput.value = widget.color_scheme;
   headerColorInput.value = widget.header_color;
-  showLogo(widget.logo_url);
   themeInput.value = widget.theme;
   positionInput.value = widget.position;
   offsetXInput.value = String(widget.offset_x);
   offsetYInput.value = String(widget.offset_y);
   originsInput.value = widget.allowed_origins.join("\n");
   snippetEl.textContent = `<script src="${location.origin}/widget.js" data-site-key="${widget.site_key}" async><\/script>`;
+
+  const logoUpload = wireImageUpload({
+    prefix: "logo",
+    uploadUrl: "/api/upload-widget-logo",
+    responseKey: "logo_url",
+    column: "logo_url",
+    supabase: context.supabase,
+    widgetId,
+    accessToken: context.session.access_token,
+  });
+  logoUpload.show(widget.logo_url);
+
+  const avatarUpload = wireImageUpload({
+    prefix: "avatar",
+    uploadUrl: "/api/upload-widget-avatar",
+    responseKey: "avatar_url",
+    column: "avatar_url",
+    supabase: context.supabase,
+    widgetId,
+    accessToken: context.session.access_token,
+  });
+  avatarUpload.show(widget.avatar_url);
 
   loadingEl.hidden = true;
   contentEl.hidden = false;
@@ -137,55 +224,6 @@ async function main() {
     headingEl.textContent = nameInput.value.trim();
     saveStatusEl.textContent = "Saved.";
     populateSidebarWidgets(context.supabase); // reflect a renamed widget in the sidebar list
-  });
-
-  logoUploadButton.addEventListener("click", () => logoFileInput.click());
-
-  logoFileInput.addEventListener("change", async () => {
-    const file = logoFileInput.files?.[0];
-    logoFileInput.value = ""; // allow re-selecting the same file later (e.g. after fixing its size)
-    if (!file) return;
-
-    logoStatusEl.textContent = "Uploading...";
-    logoStatusEl.classList.remove("error");
-    logoUploadButton.disabled = true;
-
-    try {
-      const body = new FormData();
-      body.append("widget_id", widgetId);
-      body.append("file", file);
-      const response = await fetch("/api/upload-widget-logo", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${context.session.access_token}` },
-        body,
-      });
-      if (!response.ok) {
-        const err = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error || `upload failed (${response.status})`);
-      }
-      const { logo_url } = (await response.json()) as { logo_url: string };
-      showLogo(logo_url);
-      logoStatusEl.textContent = "Logo updated.";
-    } catch (err) {
-      logoStatusEl.textContent = err instanceof Error ? err.message : "Something went wrong uploading that logo.";
-      logoStatusEl.classList.add("error");
-    } finally {
-      logoUploadButton.disabled = false;
-    }
-  });
-
-  logoRemoveButton.addEventListener("click", async () => {
-    logoRemoveButton.disabled = true;
-    const { error: removeError } = await context.supabase.from("widgets").update({ logo_url: null }).eq("id", widgetId);
-    logoRemoveButton.disabled = false;
-    if (removeError) {
-      logoStatusEl.textContent = "Something went wrong removing that logo.";
-      logoStatusEl.classList.add("error");
-      return;
-    }
-    showLogo(null);
-    logoStatusEl.textContent = "Logo removed.";
-    logoStatusEl.classList.remove("error");
   });
 }
 
