@@ -77,9 +77,16 @@ export function widgetCss(config: WidgetDisplayConfig): string {
     .launcher svg { width: 26px; height: 26px; }
 
     .panel {
+      /* Same anchor point as .launcher (same side/offsetX/offsetY), not stacked
+         above it -- the panel is taller and wider than the launcher, so anchoring it
+         at the same corner fully covers the icon underneath instead of leaving it
+         visible below an open panel. Launcher stays in the DOM (still needed to
+         close back to it), covered rather than hidden -- .panel is appended after
+         .launcher (see ui.ts), and both share the same z-index, so later-in-DOM
+         already wins the paint order with no z-index bump needed. */
       position: fixed;
       ${side}: ${offsetX}px;
-      bottom: ${offsetY + 70}px;
+      bottom: ${offsetY}px;
       width: 340px;
       max-width: calc(100vw - 40px);
       height: 480px;
