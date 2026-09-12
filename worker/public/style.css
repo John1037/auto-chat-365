@@ -462,14 +462,28 @@ pre.snippet {
 }
 
 /* Widget settings form */
+/* #page-heading's own margin-bottom is set to match the section-to-section gap
+   below (1rem trailing field margin + 1.75rem + 1.75rem) so "heading to Identity"
+   and "end of Identity to Appearance" read as the same size gap. */
+#page-heading { margin-bottom: 4.5rem; }
+
 .settings-section {
+  /* padding-top here (instead of margin-top) was a bug, not a style choice: a
+     fieldset's padding-top is inserted AFTER the legend (between legend and its
+     first field), not before it -- legend itself always renders at the border-top
+     edge regardless of padding. That put a large, unwanted gap under "Appearance"/
+     "Access" that "Identity" (first-of-type, padding-top: 0) didn't have. margin-top
+     applies before the fieldset's own border, where the divider gap actually
+     belongs -- and since border-top is non-zero, it isn't collapsed away by the
+     adjacent section's own margin-bottom.
+     Every section's legend-to-first-field gap now comes only from legend's own
+     padding-bottom below, so it's identical across all three sections. */
   border: 0;
   border-top: 1px solid var(--line);
   min-width: 0; /* fieldsets default to a min-content min-width, which can overflow a narrow flex/grid parent */
-  margin: 0 0 1.75rem;
-  padding: 1.75rem 0 0;
+  margin: 1.75rem 0;
 }
-.settings-section:first-of-type { border-top: 0; padding-top: 0; }
+.settings-section:first-of-type { border-top: 0; margin-top: 0; }
 
 .settings-section legend {
   display: block;
