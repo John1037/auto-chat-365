@@ -96,13 +96,15 @@
                 <p class="status status-inline" id="logo-status" aria-live="polite"></p>
               </div>
             </div>
-            <div class="field-row">
-              <label>Color scheme <span class="field-hint">(accent -- send button, your messages)</span>
+            <div class="field-tiles">
+              <div class="field-tile">
+                <label for="color-input">Color scheme <span class="field-hint">(accent -- send button, your messages)</span></label>
                 <input type="color" id="color-input" />
-              </label>
-              <label>Top bar background
+              </div>
+              <div class="field-tile">
+                <label for="header-color-input">Top bar background</label>
                 <input type="color" id="header-color-input" />
-              </label>
+              </div>
             </div>
             <label>Chat window theme <span class="field-hint">(the message area and input field -- the top bar keeps its own background above)</span>
               <select id="theme-input">
@@ -111,19 +113,22 @@
                 <option value="light">Light</option>
               </select>
             </label>
-            <div class="field-row">
-              <label>Position
+            <div class="field-tiles">
+              <div class="field-tile">
+                <label for="position-input">Position</label>
                 <select id="position-input">
                   <option value="bottom-right">Bottom right</option>
                   <option value="bottom-left">Bottom left</option>
                 </select>
-              </label>
-              <label>Horizontal offset (px)
+              </div>
+              <div class="field-tile">
+                <label for="offset-x-input">Horizontal offset (px)</label>
                 <input type="number" id="offset-x-input" min="0" max="400" required />
-              </label>
-              <label>Vertical offset (px)
+              </div>
+              <div class="field-tile">
+                <label for="offset-y-input">Vertical offset (px)</label>
                 <input type="number" id="offset-y-input" min="0" max="400" required />
-              </label>
+              </div>
             </div>
           </fieldset>
 
