@@ -84,6 +84,38 @@
           </fieldset>
 
           <fieldset class="settings-section">
+            <legend>Personality</legend>
+            <label>Character style <span class="field-hint">(the assistant's tone)</span>
+              <select id="character-style-input">
+                <option value="empathetic">Empathetic</option>
+                <option value="sympathetic">Sympathetic</option>
+                <option value="friendly">Friendly</option>
+                <option value="cheerful">Cheerful</option>
+                <option value="salesman">Salesman</option>
+                <option value="helpful">Helpful</option>
+                <option value="apologetic">Apologetic</option>
+                <option value="informative">Informative</option>
+                <option value="enthusiastic">Enthusiastic</option>
+              </select>
+            </label>
+            <label>Response style <span class="field-hint">(how technical its answers are)</span>
+              <select id="response-style-input">
+                <option value="technical">Technical</option>
+                <option value="balanced">Balanced</option>
+                <option value="non-technical">Non-technical</option>
+              </select>
+            </label>
+            <label>Response length
+              <select id="response-length-input">
+                <option value="terse">Terse</option>
+                <option value="concise">Concise</option>
+                <option value="normal">Normal</option>
+                <option value="verbose">Verbose</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <fieldset class="settings-section">
             <legend>Appearance</legend>
             <div class="logo-field">
               <span class="field-label">Header logo <span class="field-hint">(replaces the default mark in the widget's top bar)</span></span>

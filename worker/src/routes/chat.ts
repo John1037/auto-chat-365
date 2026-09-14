@@ -5,6 +5,7 @@ import { checkRateLimit } from "../lib/rateLimit";
 import { embedText } from "../lib/openai";
 import type { ChatMessage } from "../lib/deepseek";
 import { getChatReply } from "../lib/chatProvider";
+import { buildSystemPrompt } from "../lib/systemPrompt";
 
 interface ChatBody {
   message?: string;
@@ -52,7 +53,9 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
 
   const { data: widget, error: widgetError } = await service
     .from("widgets")
-    .select("allowed_origins, rate_limit_per_minute, rate_limit_daily, tenants!inner(is_active)")
+    .select(
+      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, tenants!inner(is_active)",
+    )
     .eq("id", widgetId)
     .maybeSingle();
 
@@ -162,9 +165,14 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     // Never fail the chat turn because retrieval had a problem -- best-effort.
   }
 
-  const systemPrompt = retrievedContext
-    ? `You are a helpful assistant for this business. Answer using only the following context when relevant:\n${retrievedContext}`
-    : "You are a helpful assistant for this business.";
+  const systemPrompt = buildSystemPrompt(
+    {
+      characterStyle: widget.character_style,
+      responseStyle: widget.response_style,
+      responseLength: widget.response_length,
+    },
+    retrievedContext,
+  );
 
   const chatMessages: ChatMessage[] = [
     { role: "system", content: systemPrompt },

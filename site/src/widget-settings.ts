@@ -17,6 +17,9 @@ interface WidgetRow {
   header_color: string;
   theme: "light" | "dark" | "auto";
   greeting_message: string;
+  character_style: string;
+  response_style: string;
+  response_length: string;
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -28,6 +31,9 @@ const nameInput = document.querySelector<HTMLInputElement>("#name-input")!;
 const chatbotNameInput = document.querySelector<HTMLInputElement>("#chatbot-name-input")!;
 const chatTitleInput = document.querySelector<HTMLInputElement>("#chat-title-input")!;
 const greetingInput = document.querySelector<HTMLInputElement>("#greeting-input")!;
+const characterStyleInput = document.querySelector<HTMLSelectElement>("#character-style-input")!;
+const responseStyleInput = document.querySelector<HTMLSelectElement>("#response-style-input")!;
+const responseLengthInput = document.querySelector<HTMLSelectElement>("#response-length-input")!;
 const colorInput = document.querySelector<HTMLInputElement>("#color-input")!;
 const headerColorInput = document.querySelector<HTMLInputElement>("#header-color-input")!;
 const themeInput = document.querySelector<HTMLSelectElement>("#theme-input")!;
@@ -146,7 +152,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -163,6 +169,9 @@ async function main() {
   chatbotNameInput.value = widget.chatbot_name ?? "";
   chatTitleInput.value = widget.chat_title;
   greetingInput.value = widget.greeting_message;
+  characterStyleInput.value = widget.character_style;
+  responseStyleInput.value = widget.response_style;
+  responseLengthInput.value = widget.response_length;
   colorInput.value = widget.color_scheme;
   headerColorInput.value = widget.header_color;
   themeInput.value = widget.theme;
@@ -207,6 +216,9 @@ async function main() {
         chatbot_name: chatbotNameInput.value.trim() || null,
         chat_title: chatTitleInput.value.trim(),
         greeting_message: greetingInput.value.trim(),
+        character_style: characterStyleInput.value,
+        response_style: responseStyleInput.value,
+        response_length: responseLengthInput.value,
         color_scheme: colorInput.value,
         header_color: headerColorInput.value,
         theme: themeInput.value,

@@ -78,7 +78,10 @@ async function main() {
   const fieldsets = [...window.document.querySelectorAll(".settings-section")];
   const legends = fieldsets.map((f) => f.querySelector("legend")?.textContent);
   console.log("  sections:", legends);
-  assert(JSON.stringify(legends) === JSON.stringify(["Identity", "Appearance", "Access"]), "three sections in the expected order");
+  assert(
+    JSON.stringify(legends) === JSON.stringify(["Identity", "Personality", "Appearance", "Access"]),
+    "four sections in the expected order",
+  );
 
   const identityIds = [...fieldsets[0].querySelectorAll("input, select, textarea")].map((el) => el.id);
   assert(identityIds.includes("name-input"), "Identity contains widget name");
@@ -87,14 +90,20 @@ async function main() {
   assert(identityIds.includes("chat-title-input"), "Identity contains chat title");
   assert(identityIds.includes("greeting-input"), "Identity contains the greeting message");
 
-  const appearanceIds = [...fieldsets[1].querySelectorAll("input, select, textarea")].map((el) => el.id);
+  const personalityIds = [...fieldsets[1].querySelectorAll("input, select, textarea")].map((el) => el.id);
+  assert(
+    JSON.stringify(personalityIds) === JSON.stringify(["character-style-input", "response-style-input", "response-length-input"]),
+    "Personality contains only the three style/length selects",
+  );
+
+  const appearanceIds = [...fieldsets[2].querySelectorAll("input, select, textarea")].map((el) => el.id);
   assert(appearanceIds.includes("logo-file-input"), "Appearance contains the header logo upload control");
   assert(appearanceIds.includes("color-input"), "Appearance contains color scheme");
   assert(appearanceIds.includes("header-color-input"), "Appearance contains top bar background");
   assert(appearanceIds.includes("theme-input"), "Appearance contains the theme selector");
   assert(appearanceIds.includes("position-input"), "Appearance contains position");
 
-  const accessIds = [...fieldsets[2].querySelectorAll("input, select, textarea")].map((el) => el.id);
+  const accessIds = [...fieldsets[3].querySelectorAll("input, select, textarea")].map((el) => el.id);
   assert(JSON.stringify(accessIds) === JSON.stringify(["origins-input"]), "Access contains only allowed origins");
 
   console.log("--- Accessibility: aria-live on async status regions ---");
