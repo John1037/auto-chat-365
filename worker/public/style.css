@@ -325,6 +325,36 @@ label { display: block; font-size: 0.85rem; color: var(--ash); margin-bottom: 1r
    button regardless of its own height. */
 .status-inline { min-height: 0; margin: 0; font-size: 0.85rem; }
 
+/* Embed Document: upload-files vs paste-text, as two clearly separate blocks. */
+.embed-section { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid var(--line); }
+.embed-section:last-of-type { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+.upload-results {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.upload-result {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--line);
+  background: rgba(26, 32, 34, 0.7);
+  font-size: 0.85rem;
+  color: var(--ash);
+}
+
+.upload-result .upload-result-name { color: var(--paper); font-weight: 600; }
+
+.upload-result.ok { border-color: rgba(70, 138, 208, 0.4); }
+.upload-result.ok .upload-result-detail { color: var(--signal); }
+
+.upload-result.error { border-color: rgba(224, 128, 111, 0.4); }
+.upload-result.error .upload-result-detail { color: #e0806f; }
+
 pre.snippet {
   background: var(--surface-2);
   border: 1px solid var(--line);

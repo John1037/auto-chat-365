@@ -52,17 +52,33 @@
     </nav>
     <main class="workspace">
       <h1>Embed Document</h1>
-      <p>Paste in text your chatbot should be able to answer questions from.</p>
-      <form id="embed-form">
-        <label>Title
-          <input type="text" id="doc-title-input" required />
-        </label>
-        <label>Content
-          <textarea id="doc-content-input" rows="16" required></textarea>
-        </label>
-        <button class="button" type="submit">Embed document</button>
-      </form>
-      <p class="status" id="status"></p>
+
+      <section class="embed-section">
+        <h2>Upload files</h2>
+        <p>Upload one or more documents for your chatbot to answer questions from. Accepted formats: .md, .txt, .docx (no PDF).</p>
+        <form id="upload-form">
+          <label>Files
+            <input type="file" id="doc-files-input" multiple accept=".md,.txt,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+          </label>
+          <button class="button" type="submit">Embed files</button>
+        </form>
+        <ul class="upload-results" id="upload-results" aria-live="polite"></ul>
+      </section>
+
+      <section class="embed-section">
+        <h2>Or paste text</h2>
+        <p>Paste in text your chatbot should be able to answer questions from.</p>
+        <form id="embed-form">
+          <label>Title
+            <input type="text" id="doc-title-input" required />
+          </label>
+          <label>Content
+            <textarea id="doc-content-input" rows="16" required></textarea>
+          </label>
+          <button class="button" type="submit">Embed document</button>
+        </form>
+        <p class="status" id="status" aria-live="polite"></p>
+      </section>
     </main>
   </div>
   <script type="module" src="/knowledge-base-embed.js"></script>

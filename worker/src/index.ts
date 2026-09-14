@@ -3,6 +3,7 @@ import { corsPreflightResponse } from "./lib/cors";
 import { handleSessionStart } from "./routes/session-start";
 import { handleChat } from "./routes/chat";
 import { handleIngestDocument } from "./routes/ingest-document";
+import { handleIngestDocumentFiles } from "./routes/ingest-document-files";
 import { handleDeleteDocument } from "./routes/delete-document";
 import { handleUpdateDocument } from "./routes/update-document";
 import { handleUpdateDocumentVisibility } from "./routes/update-document-visibility";
@@ -38,6 +39,8 @@ export default {
           return handleChat(request, env);
         case "/api/ingest-document":
           return handleIngestDocument(request, env);
+        case "/api/ingest-document-files":
+          return handleIngestDocumentFiles(request, env);
         case "/api/delete-document":
           return handleDeleteDocument(request, env);
         case "/api/update-document":
