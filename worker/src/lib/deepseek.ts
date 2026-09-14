@@ -12,7 +12,7 @@ export async function deepseekChat(env: Env, messages: ChatMessage[]): Promise<s
       Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: "deepseek-chat", messages }),
+    body: JSON.stringify({ model: "deepseek-flash", messages }),
   });
 
   if (!response.ok) {
