@@ -17,6 +17,7 @@ let selectedFiles: File[] = [];
 function renderFilePicker(): void {
   filePickerCountEl.textContent =
     selectedFiles.length === 0 ? "No files chosen" : selectedFiles.length === 1 ? "1 file chosen" : `${selectedFiles.length} files chosen`;
+  uploadSubmitButton.disabled = selectedFiles.length === 0;
 
   filePickerListEl.innerHTML = "";
   selectedFiles.forEach((file, index) => {
@@ -49,6 +50,10 @@ const contentInput = document.querySelector<HTMLTextAreaElement>("#doc-content-i
 const statusEl = document.querySelector<HTMLElement>("#status")!;
 const submitButton = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
 
+function updateEmbedButtonState(): void {
+  submitButton.disabled = !titleInput.value.trim() || !contentInput.value.trim();
+}
+
 interface FileResult {
   filename: string;
   ok: boolean;
@@ -79,6 +84,11 @@ async function main() {
   if (!context) return;
   wireSignOut();
   populateSidebarWidgets(context.supabase);
+
+  renderFilePicker(); // starts the "Embed files" button disabled -- nothing chosen yet
+  updateEmbedButtonState(); // starts the "Embed document" button disabled -- both fields start empty
+  titleInput.addEventListener("input", updateEmbedButtonState);
+  contentInput.addEventListener("input", updateEmbedButtonState);
 
   chooseFilesButton.addEventListener("click", () => filesInput.click());
 
@@ -118,7 +128,7 @@ async function main() {
     } catch (err) {
       renderResults([{ filename: "Upload", ok: false, error: err instanceof Error ? err.message : "Something went wrong." }]);
     } finally {
-      uploadSubmitButton.disabled = false;
+      uploadSubmitButton.disabled = selectedFiles.length === 0;
     }
   });
 
@@ -152,7 +162,7 @@ async function main() {
     } catch (err) {
       statusEl.textContent = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       statusEl.classList.add("error");
-      submitButton.disabled = false;
+      updateEmbedButtonState();
     }
   });
 }
