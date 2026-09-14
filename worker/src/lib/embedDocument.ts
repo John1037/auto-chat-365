@@ -66,6 +66,7 @@ export async function embedAndInsertNewDocument(
   userId: string,
   title: string,
   content: string,
+  isGlobal: boolean,
 ): Promise<{ ok: true; documentId: string } | { ok: false; error: string }> {
   const chunks = chunkText(content);
   if (chunks.length === 0) {
@@ -84,6 +85,7 @@ export async function embedAndInsertNewDocument(
       status: "ready",
       embedded_at: new Date().toISOString(),
       created_by: userId,
+      is_global: isGlobal,
     })
     .select("id")
     .single();

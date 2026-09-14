@@ -1,4 +1,43 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
+
+const visibilityGlobalRadio = document.querySelector<HTMLInputElement>("#embed-visibility-global")!;
+const visibilitySelectedRadio = document.querySelector<HTMLInputElement>("#embed-visibility-selected")!;
+const visibilityWidgetListEl = document.querySelector<HTMLElement>("#embed-visibility-widget-list")!;
+
+interface WidgetOption {
+  id: string;
+  name: string;
+}
+
+async function loadWidgetOptions(supabase: SupabaseClient): Promise<void> {
+  const { data } = await supabase.from("widgets").select("id, name").order("created_at", { ascending: true });
+  const widgets = (data ?? []) as WidgetOption[];
+
+  visibilityWidgetListEl.innerHTML = "";
+  if (widgets.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "No other widgets yet -- create one first.";
+    visibilityWidgetListEl.appendChild(empty);
+    return;
+  }
+  for (const widget of widgets) {
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = widget.id;
+    label.append(checkbox, document.createTextNode(widget.name));
+    visibilityWidgetListEl.appendChild(label);
+  }
+}
+
+function getVisibilitySelection(): { isGlobal: boolean; widgetIds: string[] } {
+  const isGlobal = visibilityGlobalRadio.checked;
+  const widgetIds = isGlobal
+    ? []
+    : Array.from(visibilityWidgetListEl.querySelectorAll<HTMLInputElement>("input[type=checkbox]:checked")).map((c) => c.value);
+  return { isGlobal, widgetIds };
+}
 
 const uploadForm = document.querySelector<HTMLFormElement>("#upload-form")!;
 const filesInput = document.querySelector<HTMLInputElement>("#doc-files-input")!;
@@ -97,6 +136,10 @@ async function main() {
   titleInput.addEventListener("input", updateEmbedButtonState);
   contentInput.addEventListener("input", updateEmbedButtonState);
 
+  loadWidgetOptions(context.supabase);
+  visibilityGlobalRadio.addEventListener("change", () => (visibilityWidgetListEl.hidden = true));
+  visibilitySelectedRadio.addEventListener("change", () => (visibilityWidgetListEl.hidden = false));
+
   chooseFilesButton.addEventListener("click", () => filesInput.click());
 
   filesInput.addEventListener("change", () => {
@@ -113,6 +156,8 @@ async function main() {
     selectedFiles = [];
     renderFilePicker(); // also disables uploadSubmitButton, since selectedFiles is now empty
 
+    const { isGlobal, widgetIds } = getVisibilitySelection();
+
     const allResults: FileResult[] = [];
     for (let i = 0; i < filesToEmbed.length; i += BATCH_SIZE) {
       const batch = filesToEmbed.slice(i, i + BATCH_SIZE);
@@ -122,6 +167,10 @@ async function main() {
         const body = new FormData();
         for (const file of batch) {
           body.append("files", file);
+        }
+        body.append("is_global", String(isGlobal));
+        for (const widgetId of widgetIds) {
+          body.append("widget_ids", widgetId);
         }
         const response = await fetch("/api/ingest-document-files", {
           method: "POST",
@@ -155,6 +204,7 @@ async function main() {
     try {
       const accessToken = await getAccessToken(context.supabase);
       if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
+      const { isGlobal, widgetIds } = getVisibilitySelection();
       const response = await fetch("/api/ingest-document", {
         method: "POST",
         headers: {
@@ -164,6 +214,8 @@ async function main() {
         body: JSON.stringify({
           title: titleInput.value.trim(),
           content: contentInput.value.trim(),
+          is_global: isGlobal,
+          widget_ids: widgetIds,
         }),
       });
 

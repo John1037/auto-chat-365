@@ -1,6 +1,7 @@
 import type { Env } from "../lib/env";
 import { getServiceClient, getVerifiedUser, getBearerToken } from "../lib/supabase";
 import { getOwnerTenantId } from "../lib/tenantOwner";
+import { verifyOwnedWidgetIds } from "../lib/widgetVisibility";
 
 interface UpdateVisibilityBody {
   document_id?: string;
@@ -54,18 +55,7 @@ export async function handleUpdateDocumentVisibility(request: Request, env: Env)
 
   // Only ever link widgets that actually belong to this tenant -- widgetIds comes
   // from the client, so a stray/forged id must be silently dropped, not trusted.
-  let ownedWidgetIds: string[] = [];
-  if (widgetIds.length > 0) {
-    const { data: widgets, error: widgetsError } = await service
-      .from("widgets")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .in("id", widgetIds);
-    if (widgetsError) {
-      return new Response(JSON.stringify({ error: "failed to verify widgets" }), { status: 500 });
-    }
-    ownedWidgetIds = (widgets ?? []).map((w) => w.id as string);
-  }
+  const ownedWidgetIds = await verifyOwnedWidgetIds(service, tenantId, widgetIds);
 
   const { error: updateError } = await service
     .from("tenant_documents")

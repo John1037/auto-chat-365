@@ -2,10 +2,13 @@ import type { Env } from "../lib/env";
 import { getServiceClient, getVerifiedUser, getBearerToken } from "../lib/supabase";
 import { getOwnerTenantId } from "../lib/tenantOwner";
 import { embedAndStoreDocument } from "../lib/embedDocument";
+import { verifyOwnedWidgetIds } from "../lib/widgetVisibility";
 
 interface IngestBody {
   title?: string;
   content?: string;
+  is_global?: boolean;
+  widget_ids?: string[];
 }
 
 export async function handleIngestDocument(request: Request, env: Env): Promise<Response> {
@@ -35,8 +38,10 @@ export async function handleIngestDocument(request: Request, env: Env): Promise<
   if (!title || !content) {
     return new Response(JSON.stringify({ error: "title and content are required" }), { status: 400 });
   }
+  const isGlobal = body.is_global !== false;
 
   const service = getServiceClient(env);
+  const ownedWidgetIds = isGlobal ? [] : await verifyOwnedWidgetIds(service, tenantId, body.widget_ids ?? []);
 
   const { data: document, error: insertError } = await service
     .from("tenant_documents")
@@ -47,6 +52,7 @@ export async function handleIngestDocument(request: Request, env: Env): Promise<
       raw_content: content,
       status: "processing",
       created_by: user.id,
+      is_global: isGlobal,
     })
     .select("id")
     .single();
@@ -57,6 +63,17 @@ export async function handleIngestDocument(request: Request, env: Env): Promise<
   const result = await embedAndStoreDocument(env, service, tenantId, document.id, content);
   if (!result.ok) {
     return new Response(JSON.stringify({ error: result.error, document_id: document.id }), { status: 502 });
+  }
+
+  if (ownedWidgetIds.length > 0) {
+    const { error: linkError } = await service
+      .from("widget_documents")
+      .insert(ownedWidgetIds.map((widgetId) => ({ widget_id: widgetId, document_id: document.id })));
+    if (linkError) {
+      // The document itself already embedded successfully -- failing safe to
+      // visible-everywhere beats leaving it silently invisible to every widget.
+      await service.from("tenant_documents").update({ is_global: true }).eq("id", document.id);
+    }
   }
 
   return new Response(JSON.stringify({ document_id: document.id }), {

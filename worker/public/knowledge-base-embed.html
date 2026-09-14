@@ -54,6 +54,20 @@
       <h1>Embed Document</h1>
 
       <section class="embed-section">
+        <h2>Visibility</h2>
+        <p>Choose which widgets can use whatever you embed below.</p>
+        <label class="radio-label">
+          <input type="radio" name="embed-visibility-scope" value="global" id="embed-visibility-global" checked />
+          All widgets
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="embed-visibility-scope" value="selected" id="embed-visibility-selected" />
+          Only selected widgets
+        </label>
+        <div id="embed-visibility-widget-list" class="checkbox-list" hidden></div>
+      </section>
+
+      <section class="embed-section">
         <h2>Upload files</h2>
         <p>Upload one or more documents for your chatbot to answer questions from. Accepted formats: .md, .txt, .docx.</p>
         <form id="upload-form">
