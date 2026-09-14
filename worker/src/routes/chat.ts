@@ -102,10 +102,19 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
       .eq("tenant_id", tenantId)
       .eq("session_id", callerId)
       .maybeSingle();
-    if (convError || !existing) {
-      return new Response(JSON.stringify({ error: "conversation not found" }), { status: 404 });
+    if (convError) {
+      return new Response(JSON.stringify({ error: "failed to look up conversation" }), { status: 500 });
     }
-  } else {
+    // A client-supplied conversation_id that doesn't resolve is a stale-state mismatch,
+    // not the visitor's fault -- most commonly a conversation_id left over from a since-
+    // replaced session_id (every /api/session-start mints a brand-new anonymous session,
+    // so a widget carrying an old conversation_id forward across that boundary is exactly
+    // this case). Silently start a new conversation instead of failing the chat turn.
+    if (!existing) {
+      conversationId = undefined;
+    }
+  }
+  if (!conversationId) {
     const { data: created, error: createError } = await service
       .from("conversations")
       .insert({ tenant_id: tenantId, session_id: callerId })

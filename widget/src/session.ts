@@ -42,8 +42,17 @@ export function saveConversationId(siteKey: string, conversationId: string): voi
 }
 
 // Reuses a stored, unexpired session; otherwise mints a fresh one. Pass force=true
-// to always mint fresh (used for the one-retry-on-401 path in api.ts) -- the prior
-// conversation_id is carried over either way so history isn't lost.
+// to always mint fresh (used for the one-retry-on-401 path in api.ts).
+//
+// A fresh mint can NOT carry the old conversation_id forward: /api/session-start
+// always calls signInAnonymously(), which creates a brand-new anonymous user (a new
+// session_id) every time it runs, rather than resuming the previous one. chat.ts
+// looks up an existing conversation_id with `WHERE session_id = callerId`, so a
+// conversation_id from a since-replaced session_id can never match -- every message
+// would 404 as "conversation not found" from that point on. That failure mode
+// previously surfaced to visitors as a generic "Failed to fetch" (that response
+// path was missing CORS headers, like every other error path before the CORS fix),
+// which is why it went unnoticed: it looked identical to a network error.
 export async function getValidSession(apiBase: string, siteKey: string, force = false): Promise<StoredSession> {
   const existing = loadSession(siteKey);
   if (!force && existing && !isExpired(existing)) return existing;
@@ -57,7 +66,7 @@ export async function getValidSession(apiBase: string, siteKey: string, force = 
     throw new Error(`session-start failed (${response.status})`);
   }
   const data = (await response.json()) as { access_token: string; refresh_token: string; expires_at: number };
-  const session: StoredSession = { ...data, conversation_id: existing?.conversation_id };
+  const session: StoredSession = { ...data };
   saveSession(siteKey, session);
   return session;
 }
