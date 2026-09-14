@@ -60,6 +60,13 @@ interface FileResult {
   error?: string;
 }
 
+// Cloudflare Workers cap total outgoing subrequests (Supabase + OpenAI calls) for a
+// single invocation -- sending all N files in one request risks hitting that mid-
+// batch, failing every file after whichever one happened to tip it over. Matches
+// the server's own MAX_FILES_PER_REQUEST (see ingest-document-files.ts) with a
+// little headroom.
+const BATCH_SIZE = 8;
+
 function renderResults(results: FileResult[]): void {
   uploadResultsEl.innerHTML = "";
   for (const result of results) {
@@ -102,33 +109,40 @@ async function main() {
     event.preventDefault();
     if (selectedFiles.length === 0) return;
 
-    uploadSubmitButton.disabled = true;
-    uploadResultsEl.innerHTML = "";
+    const filesToEmbed = selectedFiles;
+    selectedFiles = [];
+    renderFilePicker(); // also disables uploadSubmitButton, since selectedFiles is now empty
 
-    try {
-      const body = new FormData();
-      for (const file of selectedFiles) {
-        body.append("files", file);
+    const allResults: FileResult[] = [];
+    for (let i = 0; i < filesToEmbed.length; i += BATCH_SIZE) {
+      const batch = filesToEmbed.slice(i, i + BATCH_SIZE);
+      try {
+        const accessToken = await getAccessToken(context.supabase);
+        if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
+        const body = new FormData();
+        for (const file of batch) {
+          body.append("files", file);
+        }
+        const response = await fetch("/api/ingest-document-files", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body,
+        });
+        if (!response.ok) {
+          const err = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(err.error || `upload failed (${response.status})`);
+        }
+        const { results } = (await response.json()) as { results: FileResult[] };
+        allResults.push(...results);
+      } catch (err) {
+        // A whole-batch failure (session expired, network drop) still needs each of
+        // that batch's files accounted for, not silently missing from the results.
+        const message = err instanceof Error ? err.message : "Something went wrong.";
+        for (const file of batch) {
+          allResults.push({ filename: file.name, ok: false, error: message });
+        }
       }
-      const accessToken = await getAccessToken(context.supabase);
-      if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
-      const response = await fetch("/api/ingest-document-files", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body,
-      });
-      if (!response.ok) {
-        const err = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error || `upload failed (${response.status})`);
-      }
-      const { results } = (await response.json()) as { results: FileResult[] };
-      renderResults(results);
-      selectedFiles = [];
-      renderFilePicker();
-    } catch (err) {
-      renderResults([{ filename: "Upload", ok: false, error: err instanceof Error ? err.message : "Something went wrong." }]);
-    } finally {
-      uploadSubmitButton.disabled = selectedFiles.length === 0;
+      renderResults(allResults); // progressive -- updates after every batch, not just at the very end
     }
   });
 

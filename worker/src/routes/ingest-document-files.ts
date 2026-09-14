@@ -1,11 +1,18 @@
 import type { Env } from "../lib/env";
 import { getServiceClient, getVerifiedUser, getBearerToken } from "../lib/supabase";
 import { getOwnerTenantId } from "../lib/tenantOwner";
-import { embedAndStoreDocument } from "../lib/embedDocument";
+import { embedAndInsertNewDocument } from "../lib/embedDocument";
 import { extractText } from "../lib/extractText";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB per file
 const ALLOWED_EXTENSIONS = new Set(["md", "txt", "docx"]);
+// Cloudflare Workers cap total outgoing subrequests (Supabase + OpenAI calls, both
+// count) for a single invocation -- 50 on the Free plan. Each file here costs 3
+// (embed, insert document, insert chunks) plus ~2 for the auth checks up front, so
+// this stays comfortably under even that tightest limit. The client
+// (knowledge-base-embed.ts) already sends files in batches at or under this size;
+// this is a defensive floor for anyone calling the route directly.
+const MAX_FILES_PER_REQUEST = 10;
 
 interface FileResult {
   filename: string;
@@ -19,12 +26,11 @@ function extensionOf(filename: string): string {
 }
 
 // Multipart upload counterpart to ingest-document's JSON paste-text path -- one
-// tenant_documents row per uploaded file, each independently chunked/embedded via
-// the same embedAndStoreDocument used everywhere else. Processed sequentially (not
-// in parallel) to stay well within the Worker's CPU-time budget and not blow past
-// OpenAI's own rate limits when several files are uploaded at once. Failures are
-// per-file, not all-or-nothing -- a bad file in the batch shouldn't roll back the
-// good ones that already embedded successfully.
+// tenant_documents row per uploaded file. Processed sequentially (not in parallel)
+// to stay within the Worker's CPU-time budget and not blow past OpenAI's own rate
+// limits when several files are uploaded at once. Failures are per-file, not
+// all-or-nothing -- a bad file in the batch shouldn't roll back the good ones that
+// already embedded successfully.
 export async function handleIngestDocumentFiles(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -51,6 +57,9 @@ export async function handleIngestDocumentFiles(request: Request, env: Env): Pro
   const files = formData.getAll("files").filter((entry): entry is File => typeof entry !== "string");
   if (files.length === 0) {
     return new Response(JSON.stringify({ error: "at least one file is required" }), { status: 400 });
+  }
+  if (files.length > MAX_FILES_PER_REQUEST) {
+    return new Response(JSON.stringify({ error: `too many files in one request (${MAX_FILES_PER_REQUEST} max)` }), { status: 400 });
   }
 
   const service = getServiceClient(env);
@@ -81,30 +90,13 @@ export async function handleIngestDocumentFiles(request: Request, env: Env): Pro
 
     const title = file.name.replace(/\.[^./]+$/, "") || file.name;
 
-    const { data: document, error: insertError } = await service
-      .from("tenant_documents")
-      .insert({
-        tenant_id: tenantId,
-        title,
-        source_type: "upload",
-        raw_content: content,
-        status: "processing",
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-    if (insertError || !document) {
-      results.push({ filename: file.name, ok: false, error: "failed to create document" });
+    const result = await embedAndInsertNewDocument(env, service, tenantId, user.id, title, content);
+    if (!result.ok) {
+      results.push({ filename: file.name, ok: false, error: result.error });
       continue;
     }
 
-    const embedResult = await embedAndStoreDocument(env, service, tenantId, document.id, content);
-    if (!embedResult.ok) {
-      results.push({ filename: file.name, ok: false, document_id: document.id, error: embedResult.error });
-      continue;
-    }
-
-    results.push({ filename: file.name, ok: true, document_id: document.id });
+    results.push({ filename: file.name, ok: true, document_id: result.documentId });
   }
 
   return new Response(JSON.stringify({ results }), {
