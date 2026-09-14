@@ -57,10 +57,16 @@
         <h2>Upload files</h2>
         <p>Upload one or more documents for your chatbot to answer questions from. Accepted formats: .md, .txt, .docx.</p>
         <form id="upload-form">
-          <label>Files
-            <input type="file" id="doc-files-input" multiple accept=".md,.txt,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
-          </label>
-          <button class="button" type="submit">Embed files</button>
+          <div class="file-picker">
+            <div class="file-picker-header">
+              <span class="field-label">Files</span>
+              <span class="field-hint" id="file-picker-count">No files chosen</span>
+            </div>
+            <input type="file" id="doc-files-input" multiple accept=".md,.txt,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
+            <button type="button" class="button-outline" id="choose-files-button">Choose files</button>
+            <ul class="file-picker-list" id="file-picker-list"></ul>
+          </div>
+          <button class="button" type="submit" id="upload-submit-button">Embed files</button>
         </form>
         <ul class="upload-results" id="upload-results" aria-live="polite"></ul>
       </section>

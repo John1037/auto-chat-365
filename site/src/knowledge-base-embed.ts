@@ -2,8 +2,46 @@ import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } f
 
 const uploadForm = document.querySelector<HTMLFormElement>("#upload-form")!;
 const filesInput = document.querySelector<HTMLInputElement>("#doc-files-input")!;
+const chooseFilesButton = document.querySelector<HTMLButtonElement>("#choose-files-button")!;
+const filePickerCountEl = document.querySelector<HTMLElement>("#file-picker-count")!;
+const filePickerListEl = document.querySelector<HTMLElement>("#file-picker-list")!;
 const uploadResultsEl = document.querySelector<HTMLElement>("#upload-results")!;
-const uploadSubmitButton = uploadForm.querySelector<HTMLButtonElement>("button[type=submit]")!;
+const uploadSubmitButton = document.querySelector<HTMLButtonElement>("#upload-submit-button")!;
+
+// Picking files a second time replaces the native input's own FileList entirely
+// (that's just how <input type="file"> works) -- so the actual set of files to
+// embed is tracked here instead, and each "Choose files" pick is merged into it
+// rather than read directly off the input at submit time.
+let selectedFiles: File[] = [];
+
+function renderFilePicker(): void {
+  filePickerCountEl.textContent =
+    selectedFiles.length === 0 ? "No files chosen" : selectedFiles.length === 1 ? "1 file chosen" : `${selectedFiles.length} files chosen`;
+
+  filePickerListEl.innerHTML = "";
+  selectedFiles.forEach((file, index) => {
+    const item = document.createElement("li");
+    item.className = "file-picker-item";
+
+    const name = document.createElement("span");
+    name.className = "file-picker-item-name";
+    name.textContent = file.name;
+    name.title = file.name;
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "file-picker-item-remove";
+    removeButton.innerHTML = "&times;";
+    removeButton.setAttribute("aria-label", `Remove ${file.name}`);
+    removeButton.addEventListener("click", () => {
+      selectedFiles.splice(index, 1);
+      renderFilePicker();
+    });
+
+    item.append(name, removeButton);
+    filePickerListEl.appendChild(item);
+  });
+}
 
 const form = document.querySelector<HTMLFormElement>("#embed-form")!;
 const titleInput = document.querySelector<HTMLInputElement>("#doc-title-input")!;
@@ -42,17 +80,24 @@ async function main() {
   wireSignOut();
   populateSidebarWidgets(context.supabase);
 
+  chooseFilesButton.addEventListener("click", () => filesInput.click());
+
+  filesInput.addEventListener("change", () => {
+    selectedFiles = selectedFiles.concat(Array.from(filesInput.files ?? []));
+    filesInput.value = ""; // so picking the same file again later still fires a change event
+    renderFilePicker();
+  });
+
   uploadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const files = filesInput.files;
-    if (!files || files.length === 0) return;
+    if (selectedFiles.length === 0) return;
 
     uploadSubmitButton.disabled = true;
     uploadResultsEl.innerHTML = "";
 
     try {
       const body = new FormData();
-      for (const file of Array.from(files)) {
+      for (const file of selectedFiles) {
         body.append("files", file);
       }
       const accessToken = await getAccessToken(context.supabase);
@@ -68,7 +113,8 @@ async function main() {
       }
       const { results } = (await response.json()) as { results: FileResult[] };
       renderResults(results);
-      filesInput.value = "";
+      selectedFiles = [];
+      renderFilePicker();
     } catch (err) {
       renderResults([{ filename: "Upload", ok: false, error: err instanceof Error ? err.message : "Something went wrong." }]);
     } finally {
