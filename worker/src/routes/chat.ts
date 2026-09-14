@@ -2,8 +2,9 @@ import type { Env } from "../lib/env";
 import { getServiceClient, getVerifiedUserId, getBearerToken } from "../lib/supabase";
 import { isOriginAllowed, withCorsHeaders } from "../lib/cors";
 import { checkRateLimit } from "../lib/rateLimit";
-import { embedText, openaiChat } from "../lib/openai";
-import { deepseekChat, type ChatMessage } from "../lib/deepseek";
+import { embedText } from "../lib/openai";
+import type { ChatMessage } from "../lib/deepseek";
+import { getChatReply } from "../lib/chatProvider";
 
 interface ChatBody {
   message?: string;
@@ -38,7 +39,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   // Access Token Hook ever has a bug or the session has since been revoked.
   const { data: session, error: sessionError } = await service
     .from("widget_sessions")
-    .select("tenant_id, widget_id, revoked")
+    .select("tenant_id, widget_id, revoked, use_fallback_chat")
     .eq("id", callerId)
     .maybeSingle();
 
@@ -163,18 +164,15 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     { role: "user", content: message },
   ];
 
+  // DeepSeek has had real incidents (their own status page, not just this
+  // project) -- fall back to OpenAI rather than failing the whole chat turn. Once
+  // it's failed once for this session, use_fallback_chat skips straight to OpenAI
+  // on every later message instead of paying DeepSeek's own timeout again.
   let reply: string;
   try {
-    reply = await deepseekChat(env, chatMessages);
+    reply = await getChatReply(env, service, callerId, session.use_fallback_chat === true, chatMessages);
   } catch {
-    // DeepSeek has had real incidents (their own status page, not just this
-    // project) -- fall back to OpenAI (same key already used for embeddings)
-    // rather than failing the whole chat turn.
-    try {
-      reply = await openaiChat(env, chatMessages);
-    } catch {
-      return new Response(JSON.stringify({ error: "chat completion failed" }), { status: 502 });
-    }
+    return new Response(JSON.stringify({ error: "chat completion failed" }), { status: 502 });
   }
 
   const { data: assistantMessage, error: assistantInsertError } = await service
