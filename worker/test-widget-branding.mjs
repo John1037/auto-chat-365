@@ -116,10 +116,10 @@ async function main() {
     check();
   });
 
-  const logoField = settingsWindow.document.querySelector("#logo-url-input").value;
+  const logoPreviewSrc = settingsWindow.document.querySelector("#logo-preview").src;
   const headerColorField = settingsWindow.document.querySelector("#header-color-input").value;
-  console.log("  form fields:", { logoField, headerColorField });
-  assert(logoField === logoUrl, "settings form's logo URL field is pre-filled correctly");
+  console.log("  form fields:", { logoPreviewSrc, headerColorField });
+  assert(logoPreviewSrc === logoUrl, "settings form's logo preview shows the uploaded logo");
   assert(headerColorField.toLowerCase() === headerColor.toLowerCase(), "settings form's header color field is pre-filled correctly");
 
   console.log("\nALL BRANDING CHECKS PASSED");

@@ -58,6 +58,21 @@ export async function requireSiteAdmin(): Promise<AuthedContext | null> {
   return context;
 }
 
+// Re-checks the current session immediately before an authenticated fetch, instead
+// of trusting the token requireSession() captured once at page load. supabase-js
+// keeps the underlying session refreshed in the background for as long as the page
+// stays open, but nothing re-reads it unless asked -- a page (or a captured
+// access_token variable) that's been sitting open for a while sends a now-stale
+// token otherwise, and the API call fails with "invalid or expired session" even
+// though the visitor never actually got signed out. getSession() returns
+// supabase-js's current, live value (refreshing it first if it's already expired).
+export async function getAccessToken(supabase: SupabaseClient): Promise<string | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
 // Populates the Widgets section's live sub-list in the sidebar (every widget by
 // name, newest first) -- present on every authenticated page, not just the widgets
 // pages themselves, so a tenant can jump straight to any widget's settings from

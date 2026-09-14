@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
 
 interface TenantDocument {
   id: string;
@@ -46,7 +46,6 @@ const visibilitySelectedRadio = document.querySelector<HTMLInputElement>("#visib
 const visibilityWidgetList = document.querySelector<HTMLElement>("#visibility-widget-list")!;
 const visibilityCancel = document.querySelector<HTMLButtonElement>("#visibility-cancel")!;
 
-let accessToken = "";
 let editingId: string | null = null;
 let visibilityDocId: string | null = null;
 let widgetOptionsCache: WidgetOption[] | null = null;
@@ -175,7 +174,6 @@ async function main() {
   if (!context) return;
   wireSignOut();
   populateSidebarWidgets(context.supabase);
-  accessToken = context.session.access_token;
 
   await loadDocuments(context.supabase);
 
@@ -220,6 +218,7 @@ async function main() {
 
     if (action === "reembed") {
       button.disabled = true;
+      const accessToken = await getAccessToken(context.supabase);
       await fetch("/api/reembed-document", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -232,6 +231,7 @@ async function main() {
     if (action === "delete") {
       if (!confirm("Delete this document? This can't be undone.")) return;
       button.disabled = true;
+      const accessToken = await getAccessToken(context.supabase);
       await fetch("/api/delete-document", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -247,6 +247,7 @@ async function main() {
   editForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!editingId) return;
+    const accessToken = await getAccessToken(context.supabase);
     await fetch("/api/update-document", {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -273,6 +274,7 @@ async function main() {
       ? []
       : Array.from(visibilityWidgetList.querySelectorAll<HTMLInputElement>("input[type=checkbox]:checked")).map((c) => c.value);
 
+    const accessToken = await getAccessToken(context.supabase);
     await fetch("/api/update-document-visibility", {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },

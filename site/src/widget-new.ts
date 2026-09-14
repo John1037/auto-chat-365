@@ -1,4 +1,4 @@
-import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
 
 const form = document.querySelector<HTMLFormElement>("#new-widget-form")!;
 const nameInput = document.querySelector<HTMLInputElement>("#widget-name-input")!;
@@ -17,9 +17,11 @@ async function main() {
     statusEl.textContent = "Creating...";
 
     try {
+      const accessToken = await getAccessToken(context.supabase);
+      if (!accessToken) throw new Error("session expired");
       const response = await fetch("/api/create-widget", {
         method: "POST",
-        headers: { Authorization: `Bearer ${context.session.access_token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ name: nameInput.value.trim() || undefined }),
       });
       if (!response.ok) throw new Error(`create failed (${response.status})`);

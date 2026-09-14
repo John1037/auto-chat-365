@@ -1,4 +1,4 @@
-import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
 
 interface Widget {
   id: string;
@@ -48,9 +48,11 @@ async function main() {
   try {
     // Idempotent get-or-create -- guarantees this tenant (and its default widget)
     // exist before we list them, same as every other page that lands here first.
+    const accessToken = await getAccessToken(context.supabase);
+    if (!accessToken) throw new Error("session expired");
     const provisionResponse = await fetch("/api/tenant-provision", {
       method: "POST",
-      headers: { Authorization: `Bearer ${context.session.access_token}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!provisionResponse.ok) throw new Error(`provisioning failed (${provisionResponse.status})`);
 

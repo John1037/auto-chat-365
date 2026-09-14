@@ -1,4 +1,4 @@
-import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
 
 const uploadForm = document.querySelector<HTMLFormElement>("#upload-form")!;
 const filesInput = document.querySelector<HTMLInputElement>("#doc-files-input")!;
@@ -55,9 +55,11 @@ async function main() {
       for (const file of Array.from(files)) {
         body.append("files", file);
       }
+      const accessToken = await getAccessToken(context.supabase);
+      if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
       const response = await fetch("/api/ingest-document-files", {
         method: "POST",
-        headers: { Authorization: `Bearer ${context.session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         body,
       });
       if (!response.ok) {
@@ -81,10 +83,12 @@ async function main() {
     statusEl.classList.remove("error");
 
     try {
+      const accessToken = await getAccessToken(context.supabase);
+      if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
       const response = await fetch("/api/ingest-document", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${context.session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
+import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
 
 interface WidgetRow {
   id: string;
@@ -54,7 +54,6 @@ function wireImageUpload(opts: {
   column: "logo_url" | "avatar_url";
   supabase: SupabaseClient;
   widgetId: string;
-  accessToken: string;
 }) {
   const preview = document.querySelector<HTMLImageElement>(`#${opts.prefix}-preview`)!;
   const empty = document.querySelector<HTMLElement>(`#${opts.prefix}-empty`)!;
@@ -90,12 +89,14 @@ function wireImageUpload(opts: {
     uploadButton.disabled = true;
 
     try {
+      const accessToken = await getAccessToken(opts.supabase);
+      if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
       const body = new FormData();
       body.append("widget_id", opts.widgetId);
       body.append("file", file);
       const response = await fetch(opts.uploadUrl, {
         method: "POST",
-        headers: { Authorization: `Bearer ${opts.accessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         body,
       });
       if (!response.ok) {
@@ -178,7 +179,6 @@ async function main() {
     column: "logo_url",
     supabase: context.supabase,
     widgetId,
-    accessToken: context.session.access_token,
   });
   logoUpload.show(widget.logo_url);
 
@@ -189,7 +189,6 @@ async function main() {
     column: "avatar_url",
     supabase: context.supabase,
     widgetId,
-    accessToken: context.session.access_token,
   });
   avatarUpload.show(widget.avatar_url);
 
