@@ -152,12 +152,31 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       border-radius: 10px;
       font-size: 13.5px;
       line-height: 1.4;
-      white-space: pre-wrap;
       word-break: break-word;
     }
-    .bubble.user { align-self: flex-end; background: ${accentColor}; color: #141a1b; }
+    /* Plain text only, so this is what preserves a visitor's own line breaks --
+       the assistant side is rendered markdown, where spacing already comes from
+       real block elements (p/ul/li/etc.), and pre-wrap on top of those would add
+       doubled-up gaps from the whitespace marked() leaves between tags. */
+    .bubble.user { align-self: flex-end; background: ${accentColor}; color: #141a1b; white-space: pre-wrap; }
     .bubble.assistant { align-self: flex-start; background: ${p.assistantBubbleBg}; color: ${p.assistantBubbleText}; border: 1px solid ${p.panelBorder}; }
     .bubble.typing { align-self: flex-start; color: ${p.typingColor}; font-style: italic; font-size: 13px; }
+
+    .bubble.assistant > *:first-child { margin-top: 0; }
+    .bubble.assistant > *:last-child { margin-bottom: 0; }
+    .bubble.assistant p { margin: 0 0 8px; }
+    .bubble.assistant ul, .bubble.assistant ol { margin: 4px 0 8px; padding-left: 20px; }
+    .bubble.assistant li { margin-bottom: 2px; }
+    .bubble.assistant li > p { margin: 0; }
+    .bubble.assistant code { background: rgba(128, 128, 128, 0.2); padding: 1px 4px; border-radius: 4px; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .bubble.assistant pre { background: rgba(128, 128, 128, 0.15); padding: 8px 10px; border-radius: 6px; overflow-x: auto; margin: 4px 0 8px; }
+    .bubble.assistant pre code { background: none; padding: 0; }
+    .bubble.assistant a { color: ${accentColor}; }
+    .bubble.assistant blockquote { border-left: 2px solid ${p.panelBorder}; margin: 4px 0 8px; padding-left: 8px; color: ${p.typingColor}; }
+    .bubble.assistant h1, .bubble.assistant h2, .bubble.assistant h3, .bubble.assistant h4 { margin: 4px 0 6px; font-size: 1em; }
+    .bubble.assistant hr { border: none; border-top: 1px solid ${p.panelBorder}; margin: 8px 0; }
+    .bubble.assistant table { border-collapse: collapse; margin: 4px 0 8px; }
+    .bubble.assistant th, .bubble.assistant td { border: 1px solid ${p.panelBorder}; padding: 3px 6px; }
 
     .error-banner {
       padding: 8px 14px;

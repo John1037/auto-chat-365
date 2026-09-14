@@ -1,4 +1,5 @@
 import { widgetCss, LOGO_SVG, CLOSE_ICON, SEND_ICON, type WidgetDisplayConfig } from "./styles";
+import { renderMarkdown } from "./markdown";
 
 export interface Widget {
   addMessage(role: "user" | "assistant", text: string): void;
@@ -97,7 +98,13 @@ export function createWidget(
 
     const bubble = document.createElement("div");
     bubble.className = `bubble ${role}`;
-    bubble.textContent = text;
+    // Only the assistant's side is parsed as markdown -- a visitor's own typed
+    // message should show exactly what they typed, literal asterisks included.
+    if (role === "assistant") {
+      bubble.innerHTML = renderMarkdown(text);
+    } else {
+      bubble.textContent = text;
+    }
     messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
   }
