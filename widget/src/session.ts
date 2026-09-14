@@ -36,6 +36,15 @@ export function getConversationId(siteKey: string): string | undefined {
   return loadSession(siteKey)?.conversation_id;
 }
 
+// Read-only lookup for widget init: is there already a live session to restore
+// history for? Unlike getValidSession(), this never mints a new one -- a brand new
+// session by definition has no prior conversation to show, so there's no reason to
+// pay a session-start round trip just to find that out.
+export function peekValidSession(siteKey: string): StoredSession | null {
+  const existing = loadSession(siteKey);
+  return existing && !isExpired(existing) ? existing : null;
+}
+
 export function saveConversationId(siteKey: string, conversationId: string): void {
   const existing = loadSession(siteKey);
   if (existing) saveSession(siteKey, { ...existing, conversation_id: conversationId });

@@ -2,6 +2,7 @@ import type { Env } from "./lib/env";
 import { corsPreflightResponse, withCorsHeaders } from "./lib/cors";
 import { handleSessionStart } from "./routes/session-start";
 import { handleChat } from "./routes/chat";
+import { handleConversationHistory } from "./routes/conversation-history";
 import { handleIngestDocument } from "./routes/ingest-document";
 import { handleIngestDocumentFiles } from "./routes/ingest-document-files";
 import { handleDeleteDocument } from "./routes/delete-document";
@@ -29,6 +30,8 @@ async function routeApiRequest(pathname: string, request: Request, env: Env): Pr
       return handleSessionStart(request, env);
     case "/api/chat":
       return handleChat(request, env);
+    case "/api/conversation-history":
+      return handleConversationHistory(request, env);
     case "/api/ingest-document":
       return handleIngestDocument(request, env);
     case "/api/ingest-document-files":

@@ -109,12 +109,9 @@ export function createWidget(
     messages.scrollTop = messages.scrollHeight;
   }
 
-  // Client-side only -- never sent to the backend or counted as conversation
-  // history. Shown once at init, already waiting the first time a visitor opens the
-  // panel. Tenant can clear the setting to an empty string to disable it entirely.
-  if (config.greetingMessage.trim()) {
-    appendMessage("assistant", config.greetingMessage);
-  }
+  // Greeting vs. restored history is index.ts's call, not this module's -- it
+  // depends on whether there's an existing session/conversation to restore, which
+  // this module has no way to know on its own.
 
   launcher.addEventListener("click", () => {
     panel.hidden = !panel.hidden;
