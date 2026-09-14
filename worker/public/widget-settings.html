@@ -181,6 +181,19 @@
       </div>
     </main>
   </div>
+
+  <dialog class="edit-dialog crop-dialog" id="avatar-crop-dialog">
+    <p>Drag to reposition, and use the slider to zoom -- this is exactly how the avatar will appear.</p>
+    <div class="crop-canvas-wrap">
+      <canvas id="avatar-crop-canvas" width="280" height="280"></canvas>
+    </div>
+    <input type="range" id="avatar-crop-zoom" class="crop-zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom" />
+    <div class="dialog-actions">
+      <button type="button" class="button-outline" id="avatar-crop-cancel">Cancel</button>
+      <button type="button" class="button" id="avatar-crop-save">Save</button>
+    </div>
+  </dialog>
+
   <script type="module" src="/widget-settings.js"></script>
 </body>
 </html>

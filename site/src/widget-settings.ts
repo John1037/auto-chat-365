@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSession, wireSignOut, populateSidebarWidgets, getAccessToken } from "./authGuard";
+import { openAvatarCropDialog } from "./imageCrop";
 
 interface WidgetRow {
   id: string;
@@ -60,6 +61,10 @@ function wireImageUpload(opts: {
   column: "logo_url" | "avatar_url";
   supabase: SupabaseClient;
   widgetId: string;
+  // Runs on the just-picked file before it's uploaded; resolving null aborts the
+  // upload (e.g. the user cancelled a crop dialog) rather than falling back to the
+  // original file. Only the avatar control uses this today (see openAvatarCropDialog).
+  beforeUpload?: (file: File) => Promise<Blob | null>;
 }) {
   const preview = document.querySelector<HTMLImageElement>(`#${opts.prefix}-preview`)!;
   const empty = document.querySelector<HTMLElement>(`#${opts.prefix}-empty`)!;
@@ -90,6 +95,13 @@ function wireImageUpload(opts: {
     fileInput.value = ""; // allow re-selecting the same file later (e.g. after fixing its size)
     if (!file) return;
 
+    let fileToUpload: Blob = file;
+    if (opts.beforeUpload) {
+      const cropped = await opts.beforeUpload(file);
+      if (!cropped) return; // user cancelled the crop dialog -- not an error, nothing to report
+      fileToUpload = cropped;
+    }
+
     statusEl.textContent = "Uploading...";
     statusEl.classList.remove("error");
     uploadButton.disabled = true;
@@ -99,7 +111,7 @@ function wireImageUpload(opts: {
       if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
       const body = new FormData();
       body.append("widget_id", opts.widgetId);
-      body.append("file", file);
+      body.append("file", fileToUpload, fileToUpload instanceof File ? fileToUpload.name : "avatar.png");
       const response = await fetch(opts.uploadUrl, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -198,6 +210,7 @@ async function main() {
     column: "avatar_url",
     supabase: context.supabase,
     widgetId,
+    beforeUpload: openAvatarCropDialog,
   });
   avatarUpload.show(widget.avatar_url);
 

@@ -5,6 +5,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { JSDOM } from "jsdom";
 import { readFileSync } from "node:fs";
+import { Image as NodeImage } from "canvas";
 
 const SUPABASE_URL = "http://127.0.0.1:54321";
 const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY;
@@ -47,6 +48,18 @@ async function main() {
     resources: "usable",
   });
   const { window } = dom;
+
+  // Selecting an avatar file now opens a crop dialog (openAvatarCropDialog) before
+  // uploading -- jsdom itself doesn't decode <img> pixels, implement
+  // URL.createObjectURL, <dialog>.showModal()/.close(), or pointer capture at all,
+  // so those are shimmed here the same way test-avatar-crop.mjs does for imageCrop.ts
+  // directly. None of this is a real-browser gap -- only jsdom lacks these.
+  window.Image = NodeImage;
+  const pngBytesForCrop = Buffer.from(TINY_PNG_BASE64, "base64");
+  const cropDataUrl = `data:image/png;base64,${pngBytesForCrop.toString("base64")}`;
+  window.URL.createObjectURL = () => cropDataUrl;
+  window.URL.revokeObjectURL = () => {};
+
   window.fetch = async (url, init) => {
     let realInit = init;
     if (init?.body && typeof init.body.entries === "function") {
@@ -62,6 +75,12 @@ async function main() {
     }
     return fetch(new URL(url, API_BASE), realInit);
   };
+  const cropDialog = window.document.querySelector("#avatar-crop-dialog");
+  cropDialog.showModal = function () { this.open = true; };
+  cropDialog.close = function () { this.open = false; };
+  window.document.querySelector("#avatar-crop-canvas").setPointerCapture = () => {};
+  window.document.querySelector("#avatar-crop-canvas").releasePointerCapture = () => {};
+
   window.eval(readFileSync(new URL("public/widget-settings.js", import.meta.url), "utf8"));
 
   await new Promise((resolve, reject) => {
@@ -82,6 +101,19 @@ async function main() {
   const file = new window.File([pngBytes], "avatar.png", { type: "image/png" });
   Object.defineProperty(window.document.querySelector("#avatar-file-input"), "files", { value: [file], configurable: true });
   window.document.querySelector("#avatar-file-input").dispatchEvent(new window.Event("change", { bubbles: true }));
+
+  // Selecting a file now opens the crop dialog rather than uploading immediately --
+  // wait for it, then click Save (same as a user accepting the default crop).
+  await new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      if (cropDialog.open === true) return resolve();
+      if (Date.now() - start > 10000) return reject(new Error("timed out waiting for the crop dialog to open"));
+      setTimeout(check, 100);
+    };
+    check();
+  });
+  window.document.querySelector("#avatar-crop-save").dispatchEvent(new window.Event("click", { bubbles: true }));
 
   await new Promise((resolve, reject) => {
     const start = Date.now();

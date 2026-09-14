@@ -12,5 +12,8 @@
     "build": "npm run build:widget && npm run build:site",
     "dev:worker": "npm run dev -w worker",
     "dev": "npm run build && npm run dev:worker"
+  },
+  "allowScripts": {
+    "canvas@3.2.3": true
   }
 }

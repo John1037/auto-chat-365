@@ -720,4 +720,25 @@ select {
 
 .dialog-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem; }
 
+.crop-dialog { width: min(360px, 90vw); text-align: center; }
+
+.crop-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+/* The canvas itself draws its own circular clip (see imageCrop.ts) so the exported
+   image matches this exactly -- this border is only a visual ring around it, not
+   the clip itself. */
+#avatar-crop-canvas {
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  cursor: grab;
+  touch-action: none;
+}
+#avatar-crop-canvas:active { cursor: grabbing; }
+
+.crop-zoom { width: 100%; margin: 0; }
+
 [hidden] { display: none !important; }
