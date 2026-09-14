@@ -1,6 +1,6 @@
 import type { Env } from "../lib/env";
 import { getServiceClient } from "../lib/supabase";
-import { isOriginAllowed, withCorsHeaders } from "../lib/cors";
+import { isOriginAllowed } from "../lib/cors";
 
 // Public, unauthenticated (there is no visitor session yet at this point -- the
 // embed script needs its display settings before it even has a reason to mint one
@@ -39,7 +39,7 @@ export async function handleWidgetConfig(request: Request, env: Env): Promise<Re
     });
   }
 
-  const resp = new Response(
+  return new Response(
     JSON.stringify({
       chatbot_name: widget.chatbot_name,
       color_scheme: widget.color_scheme,
@@ -55,5 +55,4 @@ export async function handleWidgetConfig(request: Request, env: Env): Promise<Re
     }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
-  return withCorsHeaders(resp, origin!);
 }

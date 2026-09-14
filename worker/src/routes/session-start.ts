@@ -1,6 +1,6 @@
 import type { Env } from "../lib/env";
 import { getServiceClient } from "../lib/supabase";
-import { isOriginAllowed, withCorsHeaders } from "../lib/cors";
+import { isOriginAllowed } from "../lib/cors";
 import { checkRateLimit } from "../lib/rateLimit";
 
 interface SessionStartBody {
@@ -66,11 +66,10 @@ export async function handleSessionStart(request: Request, env: Env): Promise<Re
     widget.rate_limit_per_minute,
   );
   if (!withinLimit) {
-    const resp = new Response(JSON.stringify({ error: "rate limit exceeded" }), {
+    return new Response(JSON.stringify({ error: "rate limit exceeded" }), {
       status: 429,
       headers: { "Content-Type": "application/json" },
     });
-    return withCorsHeaders(resp, origin!);
   }
 
   // A dedicated, single-use client for the sign-in call: calling .auth.signInAnonymously()
@@ -108,7 +107,7 @@ export async function handleSessionStart(request: Request, env: Env): Promise<Re
     return new Response(JSON.stringify({ error: "failed to finalize session" }), { status: 500 });
   }
 
-  const resp = new Response(
+  return new Response(
     JSON.stringify({
       access_token: refreshed.session.access_token,
       refresh_token: refreshed.session.refresh_token,
@@ -116,5 +115,4 @@ export async function handleSessionStart(request: Request, env: Env): Promise<Re
     }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
-  return withCorsHeaders(resp, origin!);
 }

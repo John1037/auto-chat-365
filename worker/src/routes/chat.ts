@@ -1,6 +1,6 @@
 import type { Env } from "../lib/env";
 import { getServiceClient, getVerifiedUserId, getBearerToken } from "../lib/supabase";
-import { isOriginAllowed, withCorsHeaders } from "../lib/cors";
+import { isOriginAllowed } from "../lib/cors";
 import { checkRateLimit } from "../lib/rateLimit";
 import { embedText } from "../lib/openai";
 import type { ChatMessage } from "../lib/deepseek";
@@ -74,11 +74,10 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     checkRateLimit(service, tenantId, "tenant", `chat-daily:${widgetId}`, DAILY_RATE_WINDOW_SECONDS, widget.rate_limit_daily),
   ]);
   if (!withinSessionLimit || !withinTenantLimit || !withinDailyLimit) {
-    const resp = new Response(JSON.stringify({ error: "rate limit exceeded" }), {
+    return new Response(JSON.stringify({ error: "rate limit exceeded" }), {
       status: 429,
       headers: { "Content-Type": "application/json" },
     });
-    return withCorsHeaders(resp, origin!);
   }
 
   let body: ChatBody;
@@ -190,9 +189,8 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     return new Response(JSON.stringify({ error: "failed to save reply" }), { status: 500 });
   }
 
-  const resp = new Response(
+  return new Response(
     JSON.stringify({ conversation_id: conversationId, reply, message_id: assistantMessage.id }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
-  return withCorsHeaders(resp, origin!);
 }
