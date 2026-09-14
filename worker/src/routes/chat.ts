@@ -2,7 +2,7 @@ import type { Env } from "../lib/env";
 import { getServiceClient, getVerifiedUserId, getBearerToken } from "../lib/supabase";
 import { isOriginAllowed, withCorsHeaders } from "../lib/cors";
 import { checkRateLimit } from "../lib/rateLimit";
-import { embedText } from "../lib/openai";
+import { embedText, openaiChat } from "../lib/openai";
 import { deepseekChat, type ChatMessage } from "../lib/deepseek";
 
 interface ChatBody {
@@ -166,8 +166,15 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   let reply: string;
   try {
     reply = await deepseekChat(env, chatMessages);
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "chat completion failed" }), { status: 502 });
+  } catch {
+    // DeepSeek has had real incidents (their own status page, not just this
+    // project) -- fall back to OpenAI (same key already used for embeddings)
+    // rather than failing the whole chat turn.
+    try {
+      reply = await openaiChat(env, chatMessages);
+    } catch {
+      return new Response(JSON.stringify({ error: "chat completion failed" }), { status: 502 });
+    }
   }
 
   const { data: assistantMessage, error: assistantInsertError } = await service
