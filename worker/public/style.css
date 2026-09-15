@@ -741,4 +741,41 @@ select {
 
 .crop-zoom { width: 100%; margin: 0; }
 
+/* Every page shares this footer, but pages fall into three layout families with
+   different base padding (see body/.home/.app above), so the footer's own
+   horizontal spacing has to match whichever one it's sitting in rather than
+   assume any single default. */
+.site-footer {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.8rem;
+  color: var(--ash);
+}
+.site-footer a { color: var(--ash); text-decoration: none; }
+.site-footer a:hover { color: var(--paper); text-decoration: underline; }
+.footer-links { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+
+/* body/login already carry their own horizontal padding (see body{} above) -- the
+   footer only needs its own top spacing there, not extra side padding on top. */
+body.home .site-footer,
+body.app .site-footer {
+  padding-left: 2rem;
+  padding-right: 2rem;
+  padding-bottom: 1.5rem;
+}
+
+/* .workspace mirrors this same 220px offset (see .workspace above) so the footer
+   lines up under the main content column, not under the fixed sidebar beside it. */
+body.app .site-footer { margin-left: 220px; }
+
+@media (max-width: 720px) {
+  body.app .site-footer { margin-left: 0; }
+}
+
 [hidden] { display: none !important; }
