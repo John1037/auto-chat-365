@@ -170,13 +170,6 @@
               These sit on top of fixed platform protections (prompt-injection screening, payment/secret redaction,
               and content-safety checks) that always apply and can't be turned off here.
             </p>
-            <label>NSFW / adult content <span class="field-hint">(sexual violence, non-consent, incest, and anything involving minors are always blocked, regardless of this setting)</span>
-              <select id="nsfw-policy-input">
-                <option value="refuse">Refuse to respond</option>
-                <option value="warn">Respond with discretion, don't refuse</option>
-                <option value="allow">Allow adult conversation</option>
-              </select>
-            </label>
             <label>Profanity handling
               <select id="profanity-policy-input">
                 <option value="allow">Allow</option>
@@ -192,6 +185,13 @@
             </label>
             <label>Blocked topics <span class="field-hint">(one per line -- the assistant will decline to discuss these)</span>
               <textarea id="blocked-topics-input" rows="3"></textarea>
+            </label>
+            <label>NSFW / adult content <span class="field-hint">(sexual violence, non-consent, incest, and anything involving minors are always blocked, regardless of this setting)</span>
+              <select id="nsfw-policy-input">
+                <option value="refuse">Refuse to respond</option>
+                <option value="warn">Respond with discretion, don't refuse</option>
+                <option value="allow">Allow adult conversation</option>
+              </select>
             </label>
           </fieldset>
 
