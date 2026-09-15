@@ -79,8 +79,8 @@ async function main() {
   const legends = fieldsets.map((f) => f.querySelector("legend")?.textContent);
   console.log("  sections:", legends);
   assert(
-    JSON.stringify(legends) === JSON.stringify(["Identity", "Personality", "Appearance", "Access"]),
-    "four sections in the expected order",
+    JSON.stringify(legends) === JSON.stringify(["Identity", "Personality", "Appearance", "Guardrails", "Access"]),
+    "five sections in the expected order",
   );
 
   const identityIds = [...fieldsets[0].querySelectorAll("input, select, textarea")].map((el) => el.id);
@@ -103,7 +103,13 @@ async function main() {
   assert(appearanceIds.includes("theme-input"), "Appearance contains the theme selector");
   assert(appearanceIds.includes("position-input"), "Appearance contains position");
 
-  const accessIds = [...fieldsets[3].querySelectorAll("input, select, textarea")].map((el) => el.id);
+  const guardrailIds = [...fieldsets[3].querySelectorAll("input, select, textarea")].map((el) => el.id);
+  assert(
+    JSON.stringify(guardrailIds) === JSON.stringify(["profanity-policy-input", "off-topic-policy-input", "blocked-topics-input"]),
+    "Guardrails contains the three configurable dials",
+  );
+
+  const accessIds = [...fieldsets[4].querySelectorAll("input, select, textarea")].map((el) => el.id);
   assert(JSON.stringify(accessIds) === JSON.stringify(["origins-input"]), "Access contains only allowed origins");
 
   console.log("--- Accessibility: aria-live on async status regions ---");

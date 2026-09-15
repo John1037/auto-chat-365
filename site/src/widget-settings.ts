@@ -21,6 +21,9 @@ interface WidgetRow {
   character_style: string;
   response_style: string;
   response_length: string;
+  profanity_policy: string;
+  off_topic_policy: string;
+  blocked_topics: string[];
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -42,10 +45,13 @@ const positionInput = document.querySelector<HTMLSelectElement>("#position-input
 const offsetXInput = document.querySelector<HTMLInputElement>("#offset-x-input")!;
 const offsetYInput = document.querySelector<HTMLInputElement>("#offset-y-input")!;
 const originsInput = document.querySelector<HTMLTextAreaElement>("#origins-input")!;
+const profanityPolicyInput = document.querySelector<HTMLSelectElement>("#profanity-policy-input")!;
+const offTopicPolicyInput = document.querySelector<HTMLSelectElement>("#off-topic-policy-input")!;
+const blockedTopicsInput = document.querySelector<HTMLTextAreaElement>("#blocked-topics-input")!;
 const saveStatusEl = document.querySelector<HTMLElement>("#save-status")!;
 const snippetEl = document.querySelector<HTMLElement>("#embed-snippet")!;
 
-function parseOrigins(raw: string): string[] {
+function parseLines(raw: string): string[] {
   return raw
     .split("\n")
     .map((line) => line.trim())
@@ -164,7 +170,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -184,6 +190,9 @@ async function main() {
   characterStyleInput.value = widget.character_style;
   responseStyleInput.value = widget.response_style;
   responseLengthInput.value = widget.response_length;
+  profanityPolicyInput.value = widget.profanity_policy;
+  offTopicPolicyInput.value = widget.off_topic_policy;
+  blockedTopicsInput.value = widget.blocked_topics.join("\n");
   colorInput.value = widget.color_scheme;
   headerColorInput.value = widget.header_color;
   themeInput.value = widget.theme;
@@ -232,13 +241,16 @@ async function main() {
         character_style: characterStyleInput.value,
         response_style: responseStyleInput.value,
         response_length: responseLengthInput.value,
+        profanity_policy: profanityPolicyInput.value,
+        off_topic_policy: offTopicPolicyInput.value,
+        blocked_topics: parseLines(blockedTopicsInput.value),
         color_scheme: colorInput.value,
         header_color: headerColorInput.value,
         theme: themeInput.value,
         position: positionInput.value,
         offset_x: Number(offsetXInput.value),
         offset_y: Number(offsetYInput.value),
-        allowed_origins: parseOrigins(originsInput.value),
+        allowed_origins: parseLines(originsInput.value),
       })
       .eq("id", widgetId);
 

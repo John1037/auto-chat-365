@@ -6,6 +6,13 @@ import { embedText } from "../lib/openai";
 import type { ChatMessage } from "../lib/deepseek";
 import { getChatReply } from "../lib/chatProvider";
 import { buildSystemPrompt } from "../lib/systemPrompt";
+import { MAX_MESSAGE_LENGTH, redactSensitiveInfo, detectPromptInjectionAttempt, containsProfanity, matchesBlockedTopic } from "../lib/guardrails";
+import { checkModeration } from "../lib/moderation";
+
+// Generic on purpose -- naming which specific check fired (injection attempt,
+// blocked topic, profanity, moderation category) to the visitor would just hand an
+// attacker a signal for which guardrail to probe around next.
+const GUARDRAIL_REFUSAL_MESSAGE = "I'm not able to help with that request. Is there something else I can help you with?";
 
 interface ChatBody {
   message?: string;
@@ -54,7 +61,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   const { data: widget, error: widgetError } = await service
     .from("widgets")
     .select(
-      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, tenants!inner(is_active)",
+      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, tenants!inner(is_active)",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -89,10 +96,20 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   } catch {
     return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400 });
   }
-  const message = body.message?.trim();
-  if (!message) {
+  const rawMessage = body.message?.trim();
+  if (!rawMessage) {
     return new Response(JSON.stringify({ error: "message is required" }), { status: 400 });
   }
+  if (rawMessage.length > MAX_MESSAGE_LENGTH) {
+    return new Response(JSON.stringify({ error: `message is too long (${MAX_MESSAGE_LENGTH} characters max)` }), { status: 400 });
+  }
+
+  // Platform floor, not tenant-configurable: a pasted card number or API key/token
+  // should never land in our own storage or be forwarded to an LLM provider. This is
+  // what gets stored and sent onward from here on -- the visitor's own browser still
+  // shows what they actually typed (that's rendered client-side from their own input,
+  // never from this response).
+  const message = redactSensitiveInfo(rawMessage);
 
   // Resolve or create the conversation, always under an explicit tenant_id/session_id
   // filter -- the service client bypasses RLS, so this filter *is* the enforcement.
@@ -147,6 +164,35 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     return new Response(JSON.stringify({ error: "failed to save message" }), { status: 500 });
   }
 
+  // Guardrail checks -- all deterministic and all before the model is ever called
+  // ("never trust the model with access control" extends to safety, not just data
+  // access). Ordered platform floor first, then the tenant's own configurable dials.
+  // A hit here skips retrieval and the LLM entirely and returns a fixed refusal as a
+  // normal 200 reply (not an error), so it displays and is stored like any other
+  // assistant turn -- the visitor sees a graceful decline, not a broken widget.
+  const inputModeration = await checkModeration(env, message);
+  const blockedTopic = matchesBlockedTopic(message, widget.blocked_topics ?? []);
+  const isGuardrailBlocked =
+    inputModeration.hardBlocked ||
+    detectPromptInjectionAttempt(message) ||
+    blockedTopic !== null ||
+    (widget.profanity_policy === "refuse" && containsProfanity(message));
+
+  if (isGuardrailBlocked) {
+    const { data: refusalMessage, error: refusalInsertError } = await service
+      .from("messages")
+      .insert({ conversation_id: conversationId, tenant_id: tenantId, session_id: callerId, role: "assistant", content: GUARDRAIL_REFUSAL_MESSAGE })
+      .select("id")
+      .single();
+    if (refusalInsertError || !refusalMessage) {
+      return new Response(JSON.stringify({ error: "failed to save reply" }), { status: 500 });
+    }
+    return new Response(
+      JSON.stringify({ conversation_id: conversationId, reply: GUARDRAIL_REFUSAL_MESSAGE, message_id: refusalMessage.id }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   // Retrieval is widget-aware: a chunk is visible if its document is global, or
   // explicitly linked to this widget via widget_documents (see migration 0008).
   let retrievedContext = "";
@@ -172,6 +218,10 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
       responseLength: widget.response_length,
     },
     retrievedContext,
+    {
+      profanityPolicy: widget.profanity_policy,
+      offTopicPolicy: widget.off_topic_policy,
+    },
   );
 
   const chatMessages: ChatMessage[] = [
@@ -189,6 +239,15 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     reply = await getChatReply(env, service, callerId, session.use_fallback_chat === true, chatMessages);
   } catch {
     return new Response(JSON.stringify({ error: "chat completion failed" }), { status: 502 });
+  }
+
+  // Defense in depth: the model can produce unsafe content even from an innocuous
+  // prompt (retrieved context it was told to treat as untrusted, but which some
+  // model somewhere might not fully honor). Checked the same way as the visitor's
+  // own input, against the same non-configurable hard-block categories.
+  const outputModeration = await checkModeration(env, reply);
+  if (outputModeration.hardBlocked) {
+    reply = GUARDRAIL_REFUSAL_MESSAGE;
   }
 
   const { data: assistantMessage, error: assistantInsertError } = await service
