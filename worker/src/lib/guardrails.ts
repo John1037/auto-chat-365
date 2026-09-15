@@ -77,6 +77,43 @@ export function detectPromptInjectionAttempt(text: string): boolean {
   return INJECTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+// --- NSFW hard floor (platform floor, independent of nsfw_policy) ---------------
+
+// OpenAI's moderation "sexual" category does not distinguish ordinary consensual
+// adult content from incest, non-consent, or sexual violence -- verified directly
+// against the real API (all three score identically as "sexual", with "sexual
+// violence" also picking up the separate general "violence" category, not a
+// sexual-specific one). A tenant enabling nsfw_policy therefore can't rely on that
+// one coarse score alone; these categories are screened deterministically instead,
+// and this check always applies regardless of nsfw_policy -- there is no tenant
+// setting that can turn it off. sexual/minors is additionally covered by
+// moderation.ts's own always-on hard-block category, independent of this list.
+const NSFW_HARD_BLOCK_PATTERNS: RegExp[] = [
+  /\bnon[- ]?consensual\b/i,
+  /\bnon[- ]?consent\b/i,
+  /\bwithout (?:her|his|their) consent\b/i,
+  /\bagainst (?:her|his|their) will\b/i,
+  /\bforc(?:e|es|ed|ing) (?:her|him|them)? ?(?:to have sex|into sex|to sleep with)\b/i,
+  /\brape[sd]?\b/i,
+  /\braping\b/i,
+  /\bincest(?:uous)?\b/i,
+];
+
+// A family relation term and a sexual-act term appearing anywhere in the same
+// message, in either order (e.g. "have sex with my stepsister" as well as
+// "stepsister ... sex") -- a single fixed-order regex would only ever catch one
+// phrasing, and a short chat message can put either word first.
+const STEP_FAMILY_PATTERN = /\bstep ?(?:dad|mom|father|mother|brother|sister|son|daughter)\b/i;
+const MINOR_PATTERN = /\b(?:a |my )?(?:minor|child|kid|underage)\b/i;
+const SEXUAL_ACT_PATTERN = /\b(?:sex|sexual|fuck(?:ing)?|sleep(?:ing)? with|nude|naked)\b/i;
+
+export function detectHardBlockedNsfwContent(text: string): boolean {
+  if (NSFW_HARD_BLOCK_PATTERNS.some((pattern) => pattern.test(text))) return true;
+  if (STEP_FAMILY_PATTERN.test(text) && SEXUAL_ACT_PATTERN.test(text)) return true;
+  if (MINOR_PATTERN.test(text) && SEXUAL_ACT_PATTERN.test(text)) return true;
+  return false;
+}
+
 // --- Tenant-configurable dials ---------------------------------------------------
 
 // Deliberately modest -- common English profanity, not slurs (hate speech is a

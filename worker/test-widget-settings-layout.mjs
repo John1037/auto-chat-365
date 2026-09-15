@@ -105,8 +105,8 @@ async function main() {
 
   const guardrailIds = [...fieldsets[3].querySelectorAll("input, select, textarea")].map((el) => el.id);
   assert(
-    JSON.stringify(guardrailIds) === JSON.stringify(["profanity-policy-input", "off-topic-policy-input", "blocked-topics-input"]),
-    "Guardrails contains the three configurable dials",
+    JSON.stringify(guardrailIds) === JSON.stringify(["nsfw-policy-input", "profanity-policy-input", "off-topic-policy-input", "blocked-topics-input"]),
+    "Guardrails contains the four configurable dials",
   );
 
   const accessIds = [...fieldsets[4].querySelectorAll("input, select, textarea")].map((el) => el.id);

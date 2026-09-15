@@ -24,6 +24,7 @@ interface WidgetRow {
   profanity_policy: string;
   off_topic_policy: string;
   blocked_topics: string[];
+  nsfw_policy: string;
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -45,6 +46,7 @@ const positionInput = document.querySelector<HTMLSelectElement>("#position-input
 const offsetXInput = document.querySelector<HTMLInputElement>("#offset-x-input")!;
 const offsetYInput = document.querySelector<HTMLInputElement>("#offset-y-input")!;
 const originsInput = document.querySelector<HTMLTextAreaElement>("#origins-input")!;
+const nsfwPolicyInput = document.querySelector<HTMLSelectElement>("#nsfw-policy-input")!;
 const profanityPolicyInput = document.querySelector<HTMLSelectElement>("#profanity-policy-input")!;
 const offTopicPolicyInput = document.querySelector<HTMLSelectElement>("#off-topic-policy-input")!;
 const blockedTopicsInput = document.querySelector<HTMLTextAreaElement>("#blocked-topics-input")!;
@@ -170,7 +172,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -190,6 +192,7 @@ async function main() {
   characterStyleInput.value = widget.character_style;
   responseStyleInput.value = widget.response_style;
   responseLengthInput.value = widget.response_length;
+  nsfwPolicyInput.value = widget.nsfw_policy;
   profanityPolicyInput.value = widget.profanity_policy;
   offTopicPolicyInput.value = widget.off_topic_policy;
   blockedTopicsInput.value = widget.blocked_topics.join("\n");
@@ -241,6 +244,7 @@ async function main() {
         character_style: characterStyleInput.value,
         response_style: responseStyleInput.value,
         response_length: responseLengthInput.value,
+        nsfw_policy: nsfwPolicyInput.value,
         profanity_policy: profanityPolicyInput.value,
         off_topic_policy: offTopicPolicyInput.value,
         blocked_topics: parseLines(blockedTopicsInput.value),

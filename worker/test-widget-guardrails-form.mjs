@@ -67,14 +67,17 @@ async function main() {
   );
 
   console.log("--- Defaults ---");
+  const nsfwSelect = window.document.querySelector("#nsfw-policy-input");
   const profanitySelect = window.document.querySelector("#profanity-policy-input");
   const offTopicSelect = window.document.querySelector("#off-topic-policy-input");
   const blockedTopicsArea = window.document.querySelector("#blocked-topics-input");
+  assert(nsfwSelect.value === "refuse", `default nsfw_policy shows 'refuse' (got '${nsfwSelect.value}')`);
   assert(profanitySelect.value === "warn", `default profanity_policy shows 'warn' (got '${profanitySelect.value}')`);
   assert(offTopicSelect.value === "allow", `default off_topic_policy shows 'allow' (got '${offTopicSelect.value}')`);
   assert(blockedTopicsArea.value === "", "blocked_topics starts empty");
 
   console.log("--- Save round trip ---");
+  nsfwSelect.value = "allow";
   profanitySelect.value = "refuse";
   offTopicSelect.value = "strict";
   blockedTopicsArea.value = "competitor pricing\nmedical advice";
@@ -91,7 +94,8 @@ async function main() {
   });
 
   const service = createClient(SUPABASE_URL, SERVICE_KEY);
-  const { data: row } = await service.from("widgets").select("profanity_policy, off_topic_policy, blocked_topics").eq("id", widget.id).maybeSingle();
+  const { data: row } = await service.from("widgets").select("nsfw_policy, profanity_policy, off_topic_policy, blocked_topics").eq("id", widget.id).maybeSingle();
+  assert(row.nsfw_policy === "allow", `saved nsfw_policy persisted (got '${row.nsfw_policy}')`);
   assert(row.profanity_policy === "refuse", `saved profanity_policy persisted (got '${row.profanity_policy}')`);
   assert(row.off_topic_policy === "strict", `saved off_topic_policy persisted (got '${row.off_topic_policy}')`);
   assert(

@@ -7,6 +7,7 @@ export interface WidgetPersonality {
 export interface WidgetGuardrailPolicy {
   profanityPolicy: string;
   offTopicPolicy: string;
+  nsfwPolicy: string;
 }
 
 // One instruction fragment per dropdown option (see migration 0017) -- folded into
@@ -49,10 +50,13 @@ function lookup(map: Record<string, string>, value: string, fallbackKey: string)
   return map[value] ?? map[fallbackKey];
 }
 
-// off_topic_policy/profanity_policy 'refuse' are enforced deterministically in
-// chat.ts before the model is ever called (see guardrails.ts) -- these two are the
-// cases genuinely left to the model, since neither has a security consequence if the
-// model gets it wrong, only a UX/brand one (the actual guardrail split's own test).
+// off_topic_policy/profanity_policy/nsfw_policy 'refuse' are enforced
+// deterministically in chat.ts before the model is ever called (see guardrails.ts
+// and moderation.ts) -- these are the cases genuinely left to the model, since none
+// of them has a security consequence if the model gets it wrong, only a UX/brand one
+// (the actual guardrail split's own test). Sexual violence, non-consent, incest, and
+// minors remain hard-blocked in code no matter what nsfw_policy is set to -- this
+// instruction only ever runs for a message that already cleared that floor.
 export function buildGuardrailInstructions(policy: WidgetGuardrailPolicy): string {
   const lines: string[] = [];
   if (policy.offTopicPolicy === "strict") {
@@ -62,6 +66,13 @@ export function buildGuardrailInstructions(policy: WidgetGuardrailPolicy): strin
   }
   if (policy.profanityPolicy === "warn") {
     lines.push("- If the visitor uses profanity, respond calmly and professionally without escalating, and continue to help them.");
+  }
+  if (policy.nsfwPolicy === "allow") {
+    lines.push("- This business has enabled adult/NSFW conversation. You may engage with sexual or adult topics between consenting adults.");
+  } else if (policy.nsfwPolicy === "warn") {
+    lines.push(
+      "- If the conversation turns to sexual or adult topics, respond with discretion and without gratuitous detail, and gently steer back toward how you can help, rather than refusing outright.",
+    );
   }
   return lines.join("\n");
 }

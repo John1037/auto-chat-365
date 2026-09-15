@@ -6,7 +6,14 @@ import { embedText } from "../lib/openai";
 import type { ChatMessage } from "../lib/deepseek";
 import { getChatReply } from "../lib/chatProvider";
 import { buildSystemPrompt } from "../lib/systemPrompt";
-import { MAX_MESSAGE_LENGTH, redactSensitiveInfo, detectPromptInjectionAttempt, containsProfanity, matchesBlockedTopic } from "../lib/guardrails";
+import {
+  MAX_MESSAGE_LENGTH,
+  redactSensitiveInfo,
+  detectPromptInjectionAttempt,
+  containsProfanity,
+  matchesBlockedTopic,
+  detectHardBlockedNsfwContent,
+} from "../lib/guardrails";
 import { checkModeration } from "../lib/moderation";
 
 // Generic on purpose -- naming which specific check fired (injection attempt,
@@ -61,7 +68,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   const { data: widget, error: widgetError } = await service
     .from("widgets")
     .select(
-      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, tenants!inner(is_active)",
+      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy, tenants!inner(is_active)",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -172,11 +179,19 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   // assistant turn -- the visitor sees a graceful decline, not a broken widget.
   const inputModeration = await checkModeration(env, message);
   const blockedTopic = matchesBlockedTopic(message, widget.blocked_topics ?? []);
+  // General NSFW content is gated by the tenant's own nsfw_policy (moderation's
+  // "sexual" category), but sexual violence, non-consent, incest, and minors are not
+  // -- detectHardBlockedNsfwContent and moderation's own sexual/minors category
+  // (folded into inputModeration.hardBlocked) apply no matter what nsfw_policy is set
+  // to, since that one coarse "sexual" score can't tell those apart on its own
+  // (verified directly against the real API -- see guardrails.ts).
   const isGuardrailBlocked =
     inputModeration.hardBlocked ||
     detectPromptInjectionAttempt(message) ||
+    detectHardBlockedNsfwContent(message) ||
     blockedTopic !== null ||
-    (widget.profanity_policy === "refuse" && containsProfanity(message));
+    (widget.profanity_policy === "refuse" && containsProfanity(message)) ||
+    (widget.nsfw_policy === "refuse" && inputModeration.categories.includes("sexual"));
 
   if (isGuardrailBlocked) {
     const { data: refusalMessage, error: refusalInsertError } = await service
@@ -221,6 +236,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     {
       profanityPolicy: widget.profanity_policy,
       offTopicPolicy: widget.off_topic_policy,
+      nsfwPolicy: widget.nsfw_policy,
     },
   );
 
@@ -244,9 +260,14 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   // Defense in depth: the model can produce unsafe content even from an innocuous
   // prompt (retrieved context it was told to treat as untrusted, but which some
   // model somewhere might not fully honor). Checked the same way as the visitor's
-  // own input, against the same non-configurable hard-block categories.
+  // own input, against the same non-configurable hard-block categories and the same
+  // nsfw_policy gate on general sexual content.
   const outputModeration = await checkModeration(env, reply);
-  if (outputModeration.hardBlocked) {
+  if (
+    outputModeration.hardBlocked ||
+    detectHardBlockedNsfwContent(reply) ||
+    (widget.nsfw_policy === "refuse" && outputModeration.categories.includes("sexual"))
+  ) {
     reply = GUARDRAIL_REFUSAL_MESSAGE;
   }
 

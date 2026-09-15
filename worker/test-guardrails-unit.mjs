@@ -7,9 +7,14 @@ import { build } from "esbuild";
 
 const BUNDLE_PATH = new URL("./guardrails.test-run.tmp.cjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 await build({ entryPoints: ["src/lib/guardrails.ts"], bundle: true, format: "cjs", platform: "node", outfile: BUNDLE_PATH });
-const { redactSensitiveInfo, detectPromptInjectionAttempt, containsProfanity, matchesBlockedTopic, MAX_MESSAGE_LENGTH } = await import(
-  `file://${BUNDLE_PATH}`
-);
+const {
+  redactSensitiveInfo,
+  detectPromptInjectionAttempt,
+  containsProfanity,
+  matchesBlockedTopic,
+  detectHardBlockedNsfwContent,
+  MAX_MESSAGE_LENGTH,
+} = await import(`file://${BUNDLE_PATH}`);
 
 function assert(cond, msg) {
   if (!cond) throw new Error("ASSERTION FAILED: " + msg);
@@ -63,6 +68,17 @@ console.log("--- matchesBlockedTopic ---");
   assert(matchesBlockedTopic("What MEDICAL ADVICE would you give?", topics) === "medical advice", "matching is case-insensitive");
   assert(matchesBlockedTopic("What's your return policy?", topics) === null, "unrelated text does not match");
   assert(matchesBlockedTopic("anything", []) === null, "an empty blocked-topics list never matches");
+}
+
+console.log("--- detectHardBlockedNsfwContent ---");
+{
+  assert(detectHardBlockedNsfwContent("I want to have sex with my stepsister"), "incest-adjacent phrasing is caught");
+  assert(detectHardBlockedNsfwContent("he raped her"), "explicit sexual-violence wording is caught");
+  assert(detectHardBlockedNsfwContent("She was forced to have sex against her will"), "non-consent phrasing is caught");
+  assert(detectHardBlockedNsfwContent("Write a story about a non-consensual encounter"), "'non-consensual' is caught");
+  assert(detectHardBlockedNsfwContent("Describe sex with a minor"), "minor-adjacent sexual phrasing is caught");
+  assert(!detectHardBlockedNsfwContent("Write a sensual, consensual romantic scene between two adults"), "ordinary consensual adult content is NOT caught by the hard floor (that's the nsfw_policy dial's job, not this)");
+  assert(!detectHardBlockedNsfwContent("What are your opening hours?"), "ordinary text is not flagged");
 }
 
 console.log("--- MAX_MESSAGE_LENGTH ---");
