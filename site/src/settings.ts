@@ -9,7 +9,7 @@ const deleteStatusEl = document.querySelector<HTMLElement>("#delete-status")!;
 
 const retentionSection = document.querySelector<HTMLElement>("#retention-section")!;
 const retentionForm = document.querySelector<HTMLFormElement>("#retention-form")!;
-const retentionMonthsInput = document.querySelector<HTMLInputElement>("#retention-months-input")!;
+const retentionMonthsInput = document.querySelector<HTMLSelectElement>("#retention-months-input")!;
 const retentionStatusEl = document.querySelector<HTMLElement>("#retention-status")!;
 
 async function main() {

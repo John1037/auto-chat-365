@@ -99,6 +99,8 @@ async function main() {
     const retentionSection = window.document.querySelector("#retention-section");
     const retentionInput = window.document.querySelector("#retention-months-input");
     assert(retentionSection.hidden === false, "the retention section is visible for a real owner");
+    assert(retentionInput.tagName === "SELECT", "retention is a dropdown, not a spinner input");
+    assert(retentionInput.options.length === 24, `the dropdown offers exactly the 1-24 range (got ${retentionInput.options.length} options)`);
     assert(retentionInput.value === "13", `defaults to showing 13 months (got '${retentionInput.value}')`);
 
     retentionInput.value = "6";
