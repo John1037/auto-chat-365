@@ -25,6 +25,7 @@ interface WidgetRow {
   off_topic_policy: string;
   blocked_topics: string[];
   nsfw_policy: string;
+  timezone: string;
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -50,6 +51,7 @@ const nsfwPolicyInput = document.querySelector<HTMLSelectElement>("#nsfw-policy-
 const profanityPolicyInput = document.querySelector<HTMLSelectElement>("#profanity-policy-input")!;
 const offTopicPolicyInput = document.querySelector<HTMLSelectElement>("#off-topic-policy-input")!;
 const blockedTopicsInput = document.querySelector<HTMLTextAreaElement>("#blocked-topics-input")!;
+const timezoneInput = document.querySelector<HTMLSelectElement>("#timezone-input")!;
 const saveStatusEl = document.querySelector<HTMLElement>("#save-status")!;
 const snippetEl = document.querySelector<HTMLElement>("#embed-snippet")!;
 
@@ -58,6 +60,26 @@ function parseLines(raw: string): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+// Populated from the browser's own canonical IANA timezone list rather than a
+// hardcoded option list -- Intl.supportedValuesOf("timeZone") returns the same
+// underlying IANA names Postgres validates against server-side (see migration
+// 0022's trigger), so there's one source of truth instead of two lists that could
+// drift apart. currentValue is the widget's already-saved timezone -- always
+// included even on the off chance it's since been dropped from the browser's own
+// list, so selecting it here never silently changes what's actually saved.
+function populateTimezoneOptions(currentValue: string): void {
+  const zones = new Set<string>(typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : []);
+  zones.add(currentValue);
+  timezoneInput.innerHTML = "";
+  for (const zone of [...zones].sort()) {
+    const option = document.createElement("option");
+    option.value = zone;
+    option.textContent = zone;
+    timezoneInput.appendChild(option);
+  }
+  timezoneInput.value = currentValue;
 }
 
 // Shared by the logo and avatar upload controls -- identical preview/upload/remove
@@ -172,7 +194,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy, timezone",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -193,6 +215,7 @@ async function main() {
   responseStyleInput.value = widget.response_style;
   responseLengthInput.value = widget.response_length;
   nsfwPolicyInput.value = widget.nsfw_policy;
+  populateTimezoneOptions(widget.timezone);
   profanityPolicyInput.value = widget.profanity_policy;
   offTopicPolicyInput.value = widget.off_topic_policy;
   blockedTopicsInput.value = widget.blocked_topics.join("\n");
@@ -245,6 +268,7 @@ async function main() {
         response_style: responseStyleInput.value,
         response_length: responseLengthInput.value,
         nsfw_policy: nsfwPolicyInput.value,
+        timezone: timezoneInput.value,
         profanity_policy: profanityPolicyInput.value,
         off_topic_policy: offTopicPolicyInput.value,
         blocked_topics: parseLines(blockedTopicsInput.value),

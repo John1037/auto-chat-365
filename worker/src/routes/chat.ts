@@ -15,6 +15,7 @@ import {
   detectHardBlockedNsfwContent,
 } from "../lib/guardrails";
 import { checkModeration } from "../lib/moderation";
+import { recordChatStats } from "../lib/dailyStats";
 
 // Generic on purpose -- naming which specific check fired (injection attempt,
 // blocked topic, profanity, moderation category) to the visitor would just hand an
@@ -91,6 +92,16 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     checkRateLimit(service, tenantId, "tenant", `chat-daily:${widgetId}`, DAILY_RATE_WINDOW_SECONDS, widget.rate_limit_daily),
   ]);
   if (!withinSessionLimit || !withinTenantLimit || !withinDailyLimit) {
+    await recordChatStats(service, widgetId, tenantId, {
+      retrievalUsed: false,
+      fallbackUsed: false,
+      rateLimited: true,
+      guardrailInjection: false,
+      guardrailBlockedTopic: false,
+      guardrailProfanity: false,
+      guardrailNsfw: false,
+      guardrailModeration: false,
+    });
     return new Response(JSON.stringify({ error: "rate limit exceeded" }), {
       status: 429,
       headers: { "Content-Type": "application/json" },
@@ -179,21 +190,30 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   // assistant turn -- the visitor sees a graceful decline, not a broken widget.
   const inputModeration = await checkModeration(env, message);
   const blockedTopic = matchesBlockedTopic(message, widget.blocked_topics ?? []);
+  const injectionDetected = detectPromptInjectionAttempt(message);
+  const hardBlockedNsfw = detectHardBlockedNsfwContent(message);
+  const profanityRefused = widget.profanity_policy === "refuse" && containsProfanity(message);
   // General NSFW content is gated by the tenant's own nsfw_policy (moderation's
   // "sexual" category), but sexual violence, non-consent, incest, and minors are not
   // -- detectHardBlockedNsfwContent and moderation's own sexual/minors category
   // (folded into inputModeration.hardBlocked) apply no matter what nsfw_policy is set
   // to, since that one coarse "sexual" score can't tell those apart on its own
   // (verified directly against the real API -- see guardrails.ts).
+  const nsfwRefused = hardBlockedNsfw || (widget.nsfw_policy === "refuse" && inputModeration.categories.includes("sexual"));
   const isGuardrailBlocked =
-    inputModeration.hardBlocked ||
-    detectPromptInjectionAttempt(message) ||
-    detectHardBlockedNsfwContent(message) ||
-    blockedTopic !== null ||
-    (widget.profanity_policy === "refuse" && containsProfanity(message)) ||
-    (widget.nsfw_policy === "refuse" && inputModeration.categories.includes("sexual"));
+    inputModeration.hardBlocked || injectionDetected || nsfwRefused || blockedTopic !== null || profanityRefused;
 
   if (isGuardrailBlocked) {
+    await recordChatStats(service, widgetId, tenantId, {
+      retrievalUsed: false,
+      fallbackUsed: false,
+      rateLimited: false,
+      guardrailInjection: injectionDetected,
+      guardrailBlockedTopic: blockedTopic !== null,
+      guardrailProfanity: profanityRefused,
+      guardrailNsfw: nsfwRefused,
+      guardrailModeration: inputModeration.hardBlocked,
+    });
     const { data: refusalMessage, error: refusalInsertError } = await service
       .from("messages")
       .insert({ conversation_id: conversationId, tenant_id: tenantId, session_id: callerId, role: "assistant", content: GUARDRAIL_REFUSAL_MESSAGE })
@@ -251,11 +271,16 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   // it's failed once for this session, use_fallback_chat skips straight to OpenAI
   // on every later message instead of paying DeepSeek's own timeout again.
   let reply: string;
+  let usedFallback: boolean;
+  const chatStartedAt = Date.now();
   try {
-    reply = await getChatReply(env, service, callerId, session.use_fallback_chat === true, chatMessages);
+    const result = await getChatReply(env, service, callerId, session.use_fallback_chat === true, chatMessages);
+    reply = result.reply;
+    usedFallback = result.usedFallback;
   } catch {
     return new Response(JSON.stringify({ error: "chat completion failed" }), { status: 502 });
   }
+  const latencyMs = Date.now() - chatStartedAt;
 
   // Defense in depth: the model can produce unsafe content even from an innocuous
   // prompt (retrieved context it was told to treat as untrusted, but which some
@@ -270,6 +295,18 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   ) {
     reply = GUARDRAIL_REFUSAL_MESSAGE;
   }
+
+  await recordChatStats(service, widgetId, tenantId, {
+    retrievalUsed: retrievedContext !== "",
+    fallbackUsed: usedFallback,
+    rateLimited: false,
+    guardrailInjection: false,
+    guardrailBlockedTopic: false,
+    guardrailProfanity: false,
+    guardrailNsfw: false,
+    guardrailModeration: false,
+    latencyMs,
+  });
 
   const { data: assistantMessage, error: assistantInsertError } = await service
     .from("messages")

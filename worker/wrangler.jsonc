@@ -12,5 +12,11 @@
   },
   "vars": {
     "ENVIRONMENT": "production"
+  },
+  // Hourly -- generous relative to what either job actually needs (stats become
+  // "ready" once a day plus a 24h grace period; retention is measured in months),
+  // but keeps each run's batch small and self-healing if a run is ever missed.
+  "triggers": {
+    "crons": ["0 * * * *"]
   }
 }

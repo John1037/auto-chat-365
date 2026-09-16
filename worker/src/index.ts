@@ -11,10 +11,12 @@ import { handleUpdateDocumentVisibility } from "./routes/update-document-visibil
 import { handleReembedDocument } from "./routes/reembed-document";
 import { handleTenantProvision } from "./routes/tenant-provision";
 import { handleDeleteTenantAccount } from "./routes/delete-tenant-account";
+import { handleUpdateRetentionPolicy } from "./routes/update-retention-policy";
 import { handleCreateWidget } from "./routes/create-widget";
 import { handleWidgetConfig } from "./routes/widget-config";
 import { handleUploadWidgetLogo } from "./routes/upload-widget-logo";
 import { handleUploadWidgetAvatar } from "./routes/upload-widget-avatar";
+import { getServiceClient } from "./lib/supabase";
 
 async function routeApiRequest(pathname: string, request: Request, env: Env): Promise<Response> {
   switch (pathname) {
@@ -49,6 +51,8 @@ async function routeApiRequest(pathname: string, request: Request, env: Env): Pr
       return handleTenantProvision(request, env);
     case "/api/delete-tenant-account":
       return handleDeleteTenantAccount(request, env);
+    case "/api/update-retention-policy":
+      return handleUpdateRetentionPolicy(request, env);
     case "/api/create-widget":
       return handleCreateWidget(request, env);
     case "/api/widget-config":
@@ -95,5 +99,15 @@ export default {
     // asset traffic never reaches here -- this is a safety fallback, not the primary
     // asset-serving path.
     return env.ASSETS.fetch(request);
+  },
+
+  // Runs on the schedule in wrangler.jsonc's triggers.crons. Both calls are
+  // idempotent/self-healing (see migration 0025's own comments) -- safe to run on a
+  // fixed cadence with no separate "has this already run" bookkeeping, and safe if
+  // a run is missed entirely (the next one catches up).
+  async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
+    const service = getServiceClient(env);
+    await service.rpc("compute_widget_daily_stats");
+    await service.rpc("purge_expired_conversations");
   },
 } satisfies ExportedHandler<Env>;

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "lib": ["es2020", "dom"],
+    "lib": ["es2020", "dom", "es2022.intl"],
     "module": "es2020",
     "moduleResolution": "bundler",
     "strict": true,

@@ -52,7 +52,22 @@
     </nav>
     <main class="workspace">
       <h1>Settings</h1>
-      <p>Coming soon.</p>
+
+      <section id="retention-section" hidden>
+        <h2>Data retention</h2>
+        <p class="field-hint">
+          Applies to every widget on this account. Once a conversation reaches this age, its messages and the
+          conversation itself are permanently deleted -- aggregate daily statistics (conversation/message counts,
+          etc.) are kept regardless, so past performance stays visible after the raw transcripts age out.
+        </p>
+        <form id="retention-form">
+          <label>Keep conversations for <span class="field-hint">(1-24 months)</span>
+            <input type="number" id="retention-months-input" min="1" max="24" step="1" required />
+          </label>
+          <p><button class="button" type="submit">Save</button></p>
+          <p class="status" id="retention-status" aria-live="polite"></p>
+        </form>
+      </section>
 
       <section class="danger-zone" id="danger-zone" hidden>
         <h2>Danger zone</h2>

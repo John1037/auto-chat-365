@@ -7,23 +7,63 @@ const confirmInput = document.querySelector<HTMLInputElement>("#delete-confirm-i
 const deleteButton = document.querySelector<HTMLButtonElement>("#delete-account-button")!;
 const deleteStatusEl = document.querySelector<HTMLElement>("#delete-status")!;
 
+const retentionSection = document.querySelector<HTMLElement>("#retention-section")!;
+const retentionForm = document.querySelector<HTMLFormElement>("#retention-form")!;
+const retentionMonthsInput = document.querySelector<HTMLInputElement>("#retention-months-input")!;
+const retentionStatusEl = document.querySelector<HTMLElement>("#retention-status")!;
+
 async function main() {
   const context = await requireSession();
   if (!context) return; // already redirected to /login.html
   wireSignOut();
   populateSidebarWidgets(context.supabase);
 
-  // UI gating only -- this decides whether the Danger Zone even renders, not
-  // whether the deletion is allowed. The Worker route re-checks the caller's role
-  // itself before doing anything irreversible, the same way every other
-  // client-side-hidden-but-server-enforced check in this project works.
+  // UI gating only -- this decides whether the Danger Zone/retention form even
+  // render, not whether the underlying actions are allowed. Both Worker routes
+  // re-check the caller's role themselves before doing anything, the same way every
+  // other client-side-hidden-but-server-enforced check in this project works.
   const { data: membership } = await context.supabase
     .from("tenant_members")
-    .select("role")
+    .select("tenant_id, role")
     .eq("user_id", context.session.user.id)
     .maybeSingle();
   if (!membership || (membership.role !== "owner" && membership.role !== "admin")) return;
   dangerZone.hidden = false;
+  retentionSection.hidden = false;
+
+  // tenants' own SELECT policy allows any member (owner or admin) to read this --
+  // only the UPDATE is owner-only, which is why saving goes through a dedicated
+  // route below instead of a direct PostgREST update.
+  const { data: tenant } = await context.supabase
+    .from("tenants")
+    .select("conversation_retention_months")
+    .eq("id", membership.tenant_id)
+    .maybeSingle();
+  retentionMonthsInput.value = String(tenant?.conversation_retention_months ?? 13);
+
+  retentionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    retentionStatusEl.textContent = "Saving...";
+    retentionStatusEl.classList.remove("error");
+
+    try {
+      const accessToken = await getAccessToken(context.supabase);
+      if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
+      const response = await fetch("/api/update-retention-policy", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ retention_months: Number(retentionMonthsInput.value) }),
+      });
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `save failed (${response.status})`);
+      }
+      retentionStatusEl.textContent = "Saved.";
+    } catch (err) {
+      retentionStatusEl.textContent = err instanceof Error ? err.message : "Something went wrong saving that setting.";
+      retentionStatusEl.classList.add("error");
+    }
+  });
 
   confirmInput.addEventListener("input", () => {
     deleteButton.disabled = confirmInput.value !== CONFIRMATION_PHRASE;
