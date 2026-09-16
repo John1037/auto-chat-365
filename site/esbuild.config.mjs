@@ -7,6 +7,7 @@ await build({
   entryPoints: [
     "src/login.ts",
     "src/app-shell.ts",
+    "src/settings.ts",
     "src/widgets.ts",
     "src/widget-new.ts",
     "src/widget-settings.ts",
@@ -21,5 +22,5 @@ await build({
 });
 
 console.log(
-  "site: built login.js, app-shell.js, widgets.js, widget-new.js, widget-settings.js, knowledge-base-review.js, knowledge-base-embed.js -> worker/public/",
+  "site: built login.js, app-shell.js, settings.js, widgets.js, widget-new.js, widget-settings.js, knowledge-base-review.js, knowledge-base-embed.js -> worker/public/",
 );

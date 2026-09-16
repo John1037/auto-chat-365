@@ -6,6 +6,7 @@ widget/dist/
 worker/public/widget.js
 worker/public/login.js
 worker/public/app-shell.js
+worker/public/settings.js
 worker/public/widgets.js
 worker/public/widget-new.js
 worker/public/widget-settings.js

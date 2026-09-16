@@ -53,6 +53,24 @@
     <main class="workspace">
       <h1>Settings</h1>
       <p>Coming soon.</p>
+
+      <section class="danger-zone" id="danger-zone" hidden>
+        <h2>Danger zone</h2>
+        <div class="warning-box">
+          <p>
+            <strong>Deleting your account is permanent.</strong> All conversations, messages, documents, widgets,
+            and members associated with this account will be unrecoverably deleted immediately. This cannot be
+            undone.
+          </p>
+        </div>
+        <label>Type <strong>DELETE ACCOUNT</strong> to confirm
+          <input type="text" id="delete-confirm-input" autocomplete="off" spellcheck="false" />
+        </label>
+        <p>
+          <button type="button" class="button-danger" id="delete-account-button" disabled>Delete account</button>
+        </p>
+        <p class="status" id="delete-status" aria-live="polite"></p>
+      </section>
     </main>
   </div>
   <footer class="site-footer">
@@ -62,6 +80,6 @@
       <a href="/terms.html">Terms of Service</a>
     </nav>
   </footer>
-  <script type="module" src="/app-shell.js"></script>
+  <script type="module" src="/settings.js"></script>
 </body>
 </html>

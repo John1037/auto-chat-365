@@ -10,6 +10,7 @@ import { handleUpdateDocument } from "./routes/update-document";
 import { handleUpdateDocumentVisibility } from "./routes/update-document-visibility";
 import { handleReembedDocument } from "./routes/reembed-document";
 import { handleTenantProvision } from "./routes/tenant-provision";
+import { handleDeleteTenantAccount } from "./routes/delete-tenant-account";
 import { handleCreateWidget } from "./routes/create-widget";
 import { handleWidgetConfig } from "./routes/widget-config";
 import { handleUploadWidgetLogo } from "./routes/upload-widget-logo";
@@ -46,6 +47,8 @@ async function routeApiRequest(pathname: string, request: Request, env: Env): Pr
       return handleReembedDocument(request, env);
     case "/api/tenant-provision":
       return handleTenantProvision(request, env);
+    case "/api/delete-tenant-account":
+      return handleDeleteTenantAccount(request, env);
     case "/api/create-widget":
       return handleCreateWidget(request, env);
     case "/api/widget-config":
