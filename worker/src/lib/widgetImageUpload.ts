@@ -3,7 +3,13 @@ import { getServiceClient, getVerifiedUser, getBearerToken } from "./supabase";
 import { getOwnerTenantId } from "./tenantOwner";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB, matches the widget-logos bucket's own file_size_limit -- defense in depth, not trusting Storage alone
-const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/svg+xml"]);
+// SVG deliberately excluded: it's an XML format that can carry <script>/event-handler
+// content, and this is validated only by the client-declared file.type (never sniffed
+// against actual bytes), then re-served with that same declared content-type from a
+// public bucket -- accepting it would mean serving a visitor-uploadable stored-XSS
+// vector at a stable public URL. PNG/JPEG/WebP cover the logo/avatar use case without
+// that risk.
+const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 // Shared by upload-widget-logo and upload-widget-avatar -- identical validation and
 // upload flow, differing only in which widgets column gets the resulting URL and
