@@ -171,10 +171,7 @@ const periodSelect = document.querySelector<HTMLSelectElement>("#period-select")
 const metricSelect = document.querySelector<HTMLSelectElement>("#metric-select")!;
 const metricHeaderEl = document.querySelector<HTMLElement>("#volume-table-metric-header")!;
 
-const widgetModeAll = document.querySelector<HTMLInputElement>("#widget-mode-all")!;
-const widgetModeSelect = document.querySelector<HTMLInputElement>("#widget-mode-select")!;
-const widgetChecklist = document.querySelector<HTMLElement>("#widget-checklist")!;
-const widgetChecklistEmpty = document.querySelector<HTMLElement>("#widget-checklist-empty")!;
+const widgetSelect = document.querySelector<HTMLSelectElement>("#widget-select")!;
 
 const chartSvg = document.querySelector<SVGSVGElement>("#volume-chart")!;
 const tableBody = document.querySelector<HTMLElement>("#volume-table-body")!;
@@ -355,26 +352,17 @@ function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
   });
 }
 
-function renderWidgetChecklist(widgets: WidgetOption[], onChange: () => void): void {
-  if (widgets.length === 0) {
-    widgetChecklistEmpty.hidden = false;
-    return;
-  }
+function populateWidgetSelect(widgets: WidgetOption[]): void {
   for (const widget of widgets) {
-    const label = document.createElement("label");
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = widget.id;
-    input.checked = true;
-    input.addEventListener("change", onChange);
-    label.append(input, document.createTextNode(` ${widget.name}`));
-    widgetChecklist.appendChild(label);
+    const option = document.createElement("option");
+    option.value = widget.id;
+    option.textContent = widget.name;
+    widgetSelect.appendChild(option);
   }
 }
 
 function getSelectedWidgetIds(): string[] | null {
-  if (widgetModeAll.checked) return null;
-  return Array.from(widgetChecklist.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')).map((cb) => cb.value);
+  return widgetSelect.value === "all" ? null : [widgetSelect.value];
 }
 
 async function main() {
@@ -413,12 +401,6 @@ async function main() {
     metricHeaderEl.textContent = METRIC_LABELS[metric];
 
     const widgetIds = getSelectedWidgetIds();
-    if (widgetIds !== null && widgetIds.length === 0) {
-      loadingEl.hidden = true;
-      emptyEl.hidden = false;
-      emptyEl.textContent = "Select at least one widget.";
-      return;
-    }
 
     let query = supabase
       .from("widget_daily_stats")
@@ -456,21 +438,14 @@ async function main() {
     return;
   }
 
-  renderWidgetChecklist((widgetsData as WidgetOption[] | null) ?? [], loadAndRender);
+  populateWidgetSelect((widgetsData as WidgetOption[] | null) ?? []);
 
   rangePresetSelect.addEventListener("change", loadAndRender);
   periodSelect.addEventListener("change", loadAndRender);
   metricSelect.addEventListener("change", loadAndRender);
   rangeStartInput.addEventListener("change", loadAndRender);
   rangeEndInput.addEventListener("change", loadAndRender);
-  widgetModeAll.addEventListener("change", () => {
-    widgetChecklist.hidden = true;
-    loadAndRender();
-  });
-  widgetModeSelect.addEventListener("change", () => {
-    widgetChecklist.hidden = false;
-    loadAndRender();
-  });
+  widgetSelect.addEventListener("change", loadAndRender);
 
   smoothToggle.addEventListener("change", () => {
     if (lastRenderedChart) renderChart(lastRenderedChart.buckets, lastRenderedChart.sums);

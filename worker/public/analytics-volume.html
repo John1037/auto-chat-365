@@ -63,7 +63,7 @@
 
       <fieldset class="settings-section">
         <legend>Filters</legend>
-        <div class="field-tiles">
+        <div class="field-tiles field-tiles-analytics">
           <div class="field-tile">
             <label for="range-preset">Date range</label>
             <select id="range-preset">
@@ -92,6 +92,12 @@
               <option value="skill_uses_count">Skill uses</option>
             </select>
           </div>
+          <div class="field-tile">
+            <label for="widget-select">Widgets</label>
+            <select id="widget-select">
+              <option value="all" selected>All widgets</option>
+            </select>
+          </div>
         </div>
 
         <div class="field-tiles" id="custom-range-row" hidden>
@@ -103,13 +109,6 @@
             <label for="range-end">End date</label>
             <input type="date" id="range-end" />
           </div>
-        </div>
-
-        <label class="field-label">Widgets</label>
-        <label class="radio-label"><input type="radio" name="widget-mode" id="widget-mode-all" value="all" checked /> All widgets</label>
-        <label class="radio-label"><input type="radio" name="widget-mode" id="widget-mode-select" value="select" /> Select widgets</label>
-        <div class="checkbox-list" id="widget-checklist" hidden>
-          <p id="widget-checklist-empty" hidden>No widgets yet.</p>
         </div>
 
         <label class="field-label">Line style</label>

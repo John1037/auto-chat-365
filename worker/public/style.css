@@ -626,6 +626,17 @@ pre.snippet {
 
 @media (max-width: 640px) {
   .field-tiles { flex-direction: column; }
+
+  /* The Analytics filters row (Date range/Display period/Metric/Widgets) has one
+     more tile than any other .field-tiles row in the app -- stacking all 4 into a
+     single column reads worse than a 2x2 grid, so this row wraps instead of
+     stacking, while every other .field-tiles usage keeps the plain single-column
+     fallback above. */
+  .field-tiles-analytics {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .field-tiles-analytics .field-tile { flex: 1 1 calc(50% - 0.5rem); min-width: 140px; }
 }
 
 .logo-preview {

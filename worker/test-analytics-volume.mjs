@@ -102,8 +102,10 @@ async function main() {
   console.log("--- Page loads for tenant A, default filters (last 30 days / day / conversations, all widgets) ---");
   {
     const window = await openAnalyticsPage(signInA.session, widgetA1.id);
-    const checklistLabels = Array.from(window.document.querySelectorAll("#widget-checklist label")).map((l) => l.textContent.trim());
-    assert(checklistLabels.length === 2, `both of tenant A's widgets are listed (got ${JSON.stringify(checklistLabels)})`);
+    const widgetOptionLabels = Array.from(window.document.querySelectorAll("#widget-select option")).map((o) => o.textContent.trim());
+    assert(widgetOptionLabels.length === 3, `dropdown offers 'All widgets' plus both of tenant A's widgets (got ${JSON.stringify(widgetOptionLabels)})`);
+    assert(widgetOptionLabels[0] === "All widgets", "the dropdown's first option is 'All widgets'");
+    assert(widgetOptionLabels.includes("Default widget") && widgetOptionLabels.includes("Second widget"), `both real widget names are present (got ${JSON.stringify(widgetOptionLabels)})`);
 
     const rows = tableRows(window);
     const row0 = rows.find((r) => r.label.includes(new Date(d0).toLocaleString("en-US", { month: "short" })) || true);
@@ -118,21 +120,24 @@ async function main() {
     await waitFor(window, () => tableRows(window).reduce((s, r) => s + r.value, 0) === 20 + 9 + 6 + 40, "messages total updates to 75");
     assert(true, "messages metric sums to 75 across both widgets");
 
-    console.log("--- Switch to 'Select widgets' mode, uncheck widget 2 -- totals should drop to widget 1 only ---");
-    window.document.querySelector("#widget-mode-select").click();
-    const checkboxes = Array.from(window.document.querySelectorAll('#widget-checklist input[type="checkbox"]'));
-    const widget2Checkbox = checkboxes.find((cb) => cb.value === widgetA2.id);
-    widget2Checkbox.checked = false;
-    widget2Checkbox.dispatchEvent(new window.Event("change", { bubbles: true }));
+    console.log("--- Select widget 1 specifically from the dropdown -- totals should narrow to just that widget ---");
+    const widgetSelect = window.document.querySelector("#widget-select");
+    widgetSelect.value = widgetA1.id;
+    widgetSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
     await waitFor(window, () => tableRows(window).reduce((s, r) => s + r.value, 0) === 20 + 9 + 6, "messages total narrows to widget 1 alone (35)");
     assert(true, "selecting an individual widget correctly excludes the other widget's rows");
 
-    console.log("--- Uncheck all widgets -- should show the 'select at least one' message instead of a bogus zero total ---");
-    const widget1Checkbox = checkboxes.find((cb) => cb.value === widgetA1.id);
-    widget1Checkbox.checked = false;
-    widget1Checkbox.dispatchEvent(new window.Event("change", { bubbles: true }));
-    await waitFor(window, () => window.document.querySelector("#empty-range")?.hidden === false, "empty-range message shown");
-    assert(window.document.querySelector("#empty-range").textContent === "Select at least one widget.", "correct empty-selection message shown");
+    console.log("--- Select widget 2 specifically -- totals should narrow to just ITS rows ---");
+    widgetSelect.value = widgetA2.id;
+    widgetSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await waitFor(window, () => tableRows(window).reduce((s, r) => s + r.value, 0) === 40, "messages total narrows to widget 2 alone (40)");
+    assert(true, "switching the dropdown to the other widget shows only its own rows");
+
+    console.log("--- Back to 'All widgets' -- total should return to the combined 75 ---");
+    widgetSelect.value = "all";
+    widgetSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await waitFor(window, () => tableRows(window).reduce((s, r) => s + r.value, 0) === 75, "messages total returns to the combined 75");
+    assert(true, "switching back to 'All widgets' restores the combined total");
 
     window.close();
   }
@@ -158,8 +163,8 @@ async function main() {
     // Reuse tenant B's own owner session instead -- signed in above as emailB.
     const { data: signInB } = await anon.auth.signInWithPassword({ email: emailB, password });
     const window = await openAnalyticsPage(signInB.session, widgetB.id);
-    const checklistLabels = Array.from(window.document.querySelectorAll("#widget-checklist label")).map((l) => l.textContent.trim());
-    assert(checklistLabels.length === 1, `tenant B sees only its own single widget in the checklist (got ${JSON.stringify(checklistLabels)})`);
+    const widgetOptionLabels = Array.from(window.document.querySelectorAll("#widget-select option")).map((o) => o.textContent.trim());
+    assert(widgetOptionLabels.length === 2, `tenant B's dropdown offers only 'All widgets' plus its own single widget (got ${JSON.stringify(widgetOptionLabels)})`);
     const total = tableRows(window).reduce((s, r) => s + r.value, 0);
     assert(total === 999, `tenant B sees its own real 999-conversation row, and nothing from tenant A (got ${total})`);
     window.close();
