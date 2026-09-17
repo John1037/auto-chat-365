@@ -221,29 +221,15 @@ function formatAxisValue(value: number): string {
   return Math.round(value).toLocaleString();
 }
 
-// A centered moving average, not just a spline through the raw values -- real
-// day-to-day data is often too noisy for an interpolating curve alone to look
-// "smooth" (a spline that has to visit every jagged value stays jagged, just with
-// rounded corners). Averaging first is what makes the curve run along the data's
-// actual trend ("best fit") rather than tracing its noise. Window widens with n so
-// a long range gets meaningfully smoothed while a short one (too little data for
-// "noise" to mean anything) is left close to untouched.
-function smoothValues(values: number[]): number[] {
-  const n = values.length;
-  if (n < 5) return values.slice();
-  const halfWindow = Math.max(1, Math.round(n / 30));
-  return values.map((_, i) => {
-    const lo = Math.max(0, i - halfWindow);
-    const hi = Math.min(n - 1, i + halfWindow);
-    let sum = 0;
-    for (let j = lo; j <= hi; j++) sum += values[j];
-    return sum / (hi - lo + 1);
-  });
-}
-
-// Standard uniform Catmull-Rom-to-Bezier conversion: a smooth curve with each
-// segment's control points derived from its neighbours so it has no sharp corners.
-// Run over the moving-averaged values above, not the raw ones -- see smoothValues.
+// Standard uniform Catmull-Rom-to-Bezier conversion: a smooth curve that passes
+// through every ACTUAL value (no averaging/denoising pass) -- each segment's control
+// points are derived from its neighbours so the curve has no sharp corners, but nothing
+// here blends a point's value with its neighbours'. A moving average was tried here
+// initially and rejected: it necessarily blends a single-day spike into its
+// (near-zero) neighbours, so a real event -- e.g. one day of 60 messages surrounded
+// by near-zero days -- would get flattened away into a barely-there bump instead of
+// staying visible at its true height. "Smooth" only changes curve *style*
+// (continuous curvature, no dots) here, never the values themselves.
 // Falls back to duplicating the endpoint for the first/last segment, which is the
 // usual way to handle a spline having no neighbour beyond the ends.
 function buildSmoothPath(points: { x: number; y: number }[]): string {
@@ -300,13 +286,10 @@ function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
     for (let j = 0; j < maxLabels; j++) labelIndexes.add(Math.round((j * (n - 1)) / (maxLabels - 1)));
   }
 
-  // Dots and tooltips (exact mode) always reflect the real recorded value; only the
-  // smooth curve's own shape is drawn from the moving-averaged values.
-  const displayValues = smooth ? smoothValues(values) : values;
   const points = buckets.map((bucket, i) => {
-    const displayValue = displayValues[i];
-    const y = CHART_PADDING_TOP + innerHeight - (max > 0 ? (displayValue / max) * innerHeight : 0);
-    return { x: xForIndex(i), y, value: values[i], bucket };
+    const value = values[i];
+    const y = CHART_PADDING_TOP + innerHeight - (max > 0 ? (value / max) * innerHeight : 0);
+    return { x: xForIndex(i), y, value, bucket };
   });
 
   // Y-axis: zero, half, and max value, each with a faint gridline at its height.
