@@ -196,22 +196,36 @@ function renderTable(buckets: Bucket[], sums: Map<string, number>): void {
   }
 }
 
+// Fixed, real pixel units throughout (no viewBox stretching via width="100%" +
+// preserveAspectRatio="none") -- that combo was the bug: it forced the whole
+// coordinate system, bars AND text, to scale to fill whatever the container
+// happened to be, so labels warped when there were few buckets and shrank to
+// unreadable slivers when there were many. Bar slots stay a constant physical
+// width, so the chart's total width simply grows with the bucket count and the
+// container's own overflow-x: auto scrolls it -- label text is always rendered at
+// its real, undistorted font size.
+const MIN_CHART_WIDTH_PX = 320;
+const BASE_BAR_SLOT_PX = 36;
+const MIN_LABEL_SPACING_PX = 70; // comfortably fits the longest label variant ("Week of Jan 5")
+
 function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
   while (chartSvg.firstChild) chartSvg.removeChild(chartSvg.firstChild);
 
   const values = buckets.map((b) => sums.get(b.key) ?? 0);
   const max = Math.max(1, ...values);
   const n = Math.max(1, buckets.length);
-  const width = Math.max(320, n * 36);
+  const width = Math.max(MIN_CHART_WIDTH_PX, n * BASE_BAR_SLOT_PX);
   const innerHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
   const barSlot = width / n;
   const barWidth = Math.max(4, barSlot * 0.6);
-  const labelStride = Math.max(1, Math.ceil(n / 14));
+  // Space labels by real pixels, not by a fixed label count -- however many
+  // buckets fit, every Nth one gets a label so consecutive labels stay legibly
+  // apart; the rest are left unlabelled rather than crammed in or omitted wholesale.
+  const labelStride = Math.max(1, Math.round(MIN_LABEL_SPACING_PX / barSlot));
 
   chartSvg.setAttribute("viewBox", `0 0 ${width} ${CHART_HEIGHT}`);
-  chartSvg.setAttribute("width", "100%");
+  chartSvg.setAttribute("width", String(width));
   chartSvg.setAttribute("height", String(CHART_HEIGHT));
-  chartSvg.setAttribute("preserveAspectRatio", "none");
 
   const svgNS = "http://www.w3.org/2000/svg";
 
@@ -283,7 +297,15 @@ async function main() {
   populateSidebarWidgets(context.supabase);
   const supabase: SupabaseClient = context.supabase;
 
+  // Guards against out-of-order responses: two filter changes made in quick
+  // succession (e.g. switching widget mode then immediately unchecking a widget)
+  // fire two overlapping queries, and network timing offers no guarantee the first
+  // one resolves first. Without this, a slower, now-stale response could overwrite
+  // the newer filter's already-rendered result.
+  let requestSeq = 0;
+
   async function loadAndRender(): Promise<void> {
+    const seq = ++requestSeq;
     loadingEl.hidden = false;
     errorEl.hidden = true;
     emptyEl.hidden = true;
@@ -319,6 +341,7 @@ async function main() {
     if (widgetIds !== null) query = query.in("widget_id", widgetIds);
 
     const { data, error } = await query;
+    if (seq !== requestSeq) return; // a newer filter change superseded this request
     loadingEl.hidden = true;
 
     if (error) {

@@ -821,7 +821,11 @@ body.app .site-footer { margin-left: 220px; }
   margin-bottom: 1.25rem;
 }
 
-#volume-chart { display: block; min-width: 100%; }
+/* No min-width here on purpose: the chart's own width attribute (set in JS,
+   proportional to how many periods are plotted) is what should determine its
+   rendered size -- forcing it to at least fill the container is what caused the
+   stretch-distortion bug with few periods. */
+#volume-chart { display: block; }
 
 .volume-bar { fill: var(--signal); }
 
