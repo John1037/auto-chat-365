@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>New Widget — AutoChat 365</title>
+  <title>AI Analysis — AutoChat 365</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -33,11 +33,11 @@
   </header>
   <div class="app-shell">
     <nav class="sidebar">
-      <details class="sidebar-item" open>
+      <details class="sidebar-item">
         <summary>Widgets</summary>
         <a href="/dashboard.html">All widgets</a>
         <div class="sidebar-widget-list" id="sidebar-widget-list"></div>
-        <a href="/widget-new.html" class="active">New widget</a>
+        <a href="/widget-new.html">New widget</a>
       </details>
       <details class="sidebar-item">
         <summary>Knowledge Base</summary>
@@ -45,10 +45,10 @@
         <a href="/knowledge-base-embed.html">Embed Document</a>
         <a href="/knowledge-base-analysis.html">Analysis</a>
       </details>
-      <details class="sidebar-item">
+      <details class="sidebar-item" open>
         <summary>Analytics</summary>
         <a href="/analytics-volume.html">Volume</a>
-        <a href="/ai-analysis.html">AI Analysis</a>
+        <a href="/ai-analysis.html" class="active">AI Analysis</a>
       </details>
       <details class="sidebar-item">
         <summary>Settings</summary>
@@ -56,15 +56,59 @@
       </details>
     </nav>
     <main class="workspace">
-      <h1>New widget</h1>
-      <p>Give it a name to tell it apart from your others -- you can change everything else, including this, after it's created.</p>
-      <form id="new-widget-form">
-        <label>Widget name
-          <input type="text" id="widget-name-input" placeholder="Default widget" />
-        </label>
-        <button class="button" type="submit">Create widget</button>
+      <h1>AI Analysis</h1>
+      <p class="field-hint">
+        Ask a question about what customers have been talking about -- common topics, trends, what's driving
+        volume -- and get a written answer drawn from your tagged conversations. Conversations are tagged shortly
+        after they go quiet, so very recent activity may not be reflected yet.
+      </p>
+
+      <fieldset class="settings-section">
+        <legend>Filters</legend>
+        <div class="field-tiles">
+          <div class="field-tile">
+            <label for="range-preset">Date range</label>
+            <select id="range-preset">
+              <option value="last7" selected>Last 7 days</option>
+              <option value="last30">Last 30 days</option>
+              <option value="last90">Last 90 days</option>
+              <option value="month_to_date">Month to date</option>
+              <option value="last12months">Last 12 months</option>
+              <option value="custom">Custom range</option>
+            </select>
+          </div>
+          <div class="field-tile">
+            <label for="widget-select">Widgets</label>
+            <select id="widget-select">
+              <option value="all" selected>All widgets</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-tiles" id="custom-range-row" hidden>
+          <div class="field-tile">
+            <label for="range-start">Start date</label>
+            <input type="date" id="range-start" />
+          </div>
+          <div class="field-tile">
+            <label for="range-end">End date</label>
+            <input type="date" id="range-end" />
+          </div>
+        </div>
+      </fieldset>
+
+      <form id="query-form">
+        <label for="query-input">Ask a question</label>
+        <textarea id="query-input" rows="3" maxlength="500" placeholder="e.g. What were most customers asking about yesterday?" required></textarea>
+        <p><button class="button" type="submit" id="analyze-button">Analyze</button></p>
+        <p class="status" id="query-status" aria-live="polite"></p>
       </form>
-      <p class="status" id="status"></p>
+
+      <div id="answer-wrap" hidden>
+        <h2>Answer</h2>
+        <p id="answer-text"></p>
+        <p class="field-hint" id="answer-meta"></p>
+      </div>
     </main>
   </div>
   <footer class="site-footer">
@@ -74,6 +118,6 @@
       <a href="/terms.html">Terms of Service</a>
     </nav>
   </footer>
-  <script type="module" src="/widget-new.js"></script>
+  <script type="module" src="/ai-analysis.js"></script>
 </body>
 </html>

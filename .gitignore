@@ -13,6 +13,7 @@ worker/public/widget-settings.js
 worker/public/knowledge-base-review.js
 worker/public/knowledge-base-embed.js
 worker/public/analytics-volume.js
+worker/public/ai-analysis.js
 
 # Secrets -- never commit real keys. worker/.dev.vars holds local dev secrets for
 # `wrangler dev`; production secrets are pushed via `wrangler secret put`.

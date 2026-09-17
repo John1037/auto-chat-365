@@ -164,6 +164,12 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     conversationId = created.id;
   }
 
+  // A conversation resuming after already being tagged (see conversationTagging.ts)
+  // means its topic tag is now stale -- clear it so the hourly job re-tags it once it
+  // goes quiet again. Harmless no-op on the far more common case of an untagged or
+  // brand-new conversation; never worth failing the chat turn over.
+  await service.from("conversation_topics").delete().eq("conversation_id", conversationId);
+
   const { data: history } = await service
     .from("messages")
     .select("role, content")

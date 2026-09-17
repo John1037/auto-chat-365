@@ -54,14 +54,16 @@ export async function embedTexts(env: Env, texts: string[]): Promise<number[][]>
 // chat.ts) -- same OpenAI key already used for embeddings, just a different
 // endpoint. Same ChatMessage shape as deepseekChat so the caller doesn't need to
 // know which provider actually served a given request.
-export async function openaiChat(env: Env, messages: ChatMessage[]): Promise<string> {
+export async function openaiChat(env: Env, messages: ChatMessage[], maxTokens?: number): Promise<string> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.OPENAI_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: FALLBACK_CHAT_MODEL, messages }),
+    // This model takes max_completion_tokens, not max_tokens -- confirmed directly
+    // against the real API (see FALLBACK_CHAT_MODEL's own comment above).
+    body: JSON.stringify({ model: FALLBACK_CHAT_MODEL, messages, ...(maxTokens ? { max_completion_tokens: maxTokens } : {}) }),
     signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
   });
 

@@ -12,14 +12,14 @@ export interface ChatMessage {
 // actually makes that fallback useful.
 const CHAT_TIMEOUT_MS = 20_000;
 
-export async function deepseekChat(env: Env, messages: ChatMessage[]): Promise<string> {
+export async function deepseekChat(env: Env, messages: ChatMessage[], maxTokens?: number): Promise<string> {
   const response = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: "deepseek-flash", messages }),
+    body: JSON.stringify({ model: "deepseek-flash", messages, ...(maxTokens ? { max_tokens: maxTokens } : {}) }),
     signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
   });
 

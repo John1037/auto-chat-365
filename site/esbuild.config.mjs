@@ -14,6 +14,7 @@ await build({
     "src/knowledge-base-review.ts",
     "src/knowledge-base-embed.ts",
     "src/analytics-volume.ts",
+    "src/ai-analysis.ts",
   ],
   bundle: true,
   minify: true,
@@ -23,5 +24,5 @@ await build({
 });
 
 console.log(
-  "site: built login.js, app-shell.js, settings.js, widgets.js, widget-new.js, widget-settings.js, knowledge-base-review.js, knowledge-base-embed.js, analytics-volume.js -> worker/public/",
+  "site: built login.js, app-shell.js, settings.js, widgets.js, widget-new.js, widget-settings.js, knowledge-base-review.js, knowledge-base-embed.js, analytics-volume.js, ai-analysis.js -> worker/public/",
 );

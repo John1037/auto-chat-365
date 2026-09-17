@@ -16,7 +16,9 @@ import { handleCreateWidget } from "./routes/create-widget";
 import { handleWidgetConfig } from "./routes/widget-config";
 import { handleUploadWidgetLogo } from "./routes/upload-widget-logo";
 import { handleUploadWidgetAvatar } from "./routes/upload-widget-avatar";
+import { handleAiAnalysis } from "./routes/ai-analysis";
 import { getServiceClient } from "./lib/supabase";
+import { tagQuietConversations } from "./lib/conversationTagging";
 
 async function routeApiRequest(pathname: string, request: Request, env: Env): Promise<Response> {
   switch (pathname) {
@@ -61,6 +63,8 @@ async function routeApiRequest(pathname: string, request: Request, env: Env): Pr
       return handleUploadWidgetLogo(request, env);
     case "/api/upload-widget-avatar":
       return handleUploadWidgetAvatar(request, env);
+    case "/api/ai-analysis":
+      return handleAiAnalysis(request, env);
     default:
       return new Response("Not found", { status: 404 });
   }
@@ -109,5 +113,11 @@ export default {
     const service = getServiceClient(env);
     await service.rpc("compute_widget_daily_stats");
     await service.rpc("purge_expired_conversations");
+    // Tags conversations that have gone quiet since the last tick (see
+    // conversationTagging.ts) -- feeds the "AI Analysis" page. Independent of the two
+    // calls above: purge only reaches conversations that are months old (per the
+    // tenant's retention policy), while this looks for ones quiet for just 30 minutes,
+    // so there's no real overlap between what each one touches.
+    await tagQuietConversations(env, service);
   },
 } satisfies ExportedHandler<Env>;

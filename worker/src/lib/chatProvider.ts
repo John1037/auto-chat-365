@@ -35,3 +35,15 @@ export async function getChatReply(
   }
   return { reply: await openaiChat(env, messages), usedFallback: true };
 }
+
+// A simpler fallback than getChatReply above -- no per-session persisted "always use
+// fallback from now on" state, since callers here (conversation tagging, AI Analysis)
+// aren't a single visitor's ongoing session. A transient DeepSeek failure on one call
+// just falls back to OpenAI for that one call.
+export async function chatWithFallback(env: Env, messages: ChatMessage[], maxTokens?: number): Promise<string> {
+  try {
+    return await deepseekChat(env, messages, maxTokens);
+  } catch {
+    return await openaiChat(env, messages, maxTokens);
+  }
+}

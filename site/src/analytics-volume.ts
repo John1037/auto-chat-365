@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSession, wireSignOut, populateSidebarWidgets } from "./authGuard";
+import { type Preset, type Ymd, isoFromYmd, isoToYmd, ymdToUtcMs, ymdFromUtcMs, shiftMonths, shiftDays, computeRange, DAY_MS } from "./dateRange";
 
 interface WidgetOption {
   id: string;
@@ -17,7 +18,6 @@ interface DailyStatsRow {
 
 type Metric = "conversations_started" | "messages_count" | "tool_calls_count" | "skill_uses_count";
 type Period = "day" | "week" | "month";
-type Preset = "last7" | "last30" | "last90" | "month_to_date" | "last12months" | "custom";
 
 const METRIC_LABELS: Record<Metric, string> = {
   conversations_started: "Conversations",
@@ -27,13 +27,6 @@ const METRIC_LABELS: Record<Metric, string> = {
 };
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-interface Ymd {
-  y: number;
-  m: number; // 0-indexed, matches Date's own convention
-  d: number;
-}
 
 interface Bucket {
   key: string;
@@ -44,40 +37,6 @@ function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
 
-function isoFromYmd(ymd: Ymd): string {
-  return `${ymd.y}-${pad2(ymd.m + 1)}-${pad2(ymd.d)}`;
-}
-
-function isoToYmd(iso: string): Ymd {
-  const [y, m, d] = iso.split("-").map(Number);
-  return { y, m: m - 1, d };
-}
-
-function ymdToUtcMs(ymd: Ymd): number {
-  return Date.UTC(ymd.y, ymd.m, ymd.d);
-}
-
-function ymdFromUtcMs(ms: number): Ymd {
-  const dt = new Date(ms);
-  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth(), d: dt.getUTCDate() };
-}
-
-function shiftMonths(ymd: Ymd, months: number): Ymd {
-  return ymdFromUtcMs(Date.UTC(ymd.y, ymd.m + months, ymd.d));
-}
-
-function shiftDays(ymd: Ymd, days: number): Ymd {
-  return ymdFromUtcMs(ymdToUtcMs(ymd) + days * DAY_MS);
-}
-
-// Browser-local "today" -- this is a display filter, not a security- or
-// billing-relevant boundary, so it's fine that it doesn't match any one widget's own
-// timezone (stat_date itself is already resolved per-widget server-side).
-function todayYmd(): Ymd {
-  const now = new Date();
-  return { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() };
-}
-
 function mondayOf(ymd: Ymd): Ymd {
   const dow = new Date(ymdToUtcMs(ymd)).getUTCDay(); // 0=Sun..6=Sat
   const daysSinceMonday = (dow + 6) % 7;
@@ -86,29 +45,6 @@ function mondayOf(ymd: Ymd): Ymd {
 
 function monthKey(ymd: Ymd): string {
   return `${ymd.y}-${pad2(ymd.m + 1)}`;
-}
-
-function computeRange(preset: Preset, customStart: string, customEnd: string): { start: string; end: string } | null {
-  const today = todayYmd();
-  const endIso = isoFromYmd(today);
-
-  switch (preset) {
-    case "last7":
-      return { start: isoFromYmd(shiftDays(today, -6)), end: endIso };
-    case "last30":
-      return { start: isoFromYmd(shiftDays(today, -29)), end: endIso };
-    case "last90":
-      return { start: isoFromYmd(shiftDays(today, -89)), end: endIso };
-    case "month_to_date":
-      return { start: isoFromYmd({ y: today.y, m: today.m, d: 1 }), end: endIso };
-    case "last12months": {
-      const start = shiftMonths({ y: today.y, m: today.m, d: 1 }, -11);
-      return { start: isoFromYmd(start), end: endIso };
-    }
-    case "custom":
-      if (!customStart || !customEnd || customStart > customEnd) return null;
-      return { start: customStart, end: customEnd };
-  }
 }
 
 function buildBuckets(startIso: string, endIso: string, period: Period): Bucket[] {
