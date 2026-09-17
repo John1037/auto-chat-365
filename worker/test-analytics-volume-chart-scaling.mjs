@@ -1,3 +1,8 @@
+// Real Playwright check for the Analytics > Volume line chart: it must always fit
+// the available width (no horizontal scrollbar, whether plotting 4 periods or 365),
+// plot every period as a point on the line regardless of count, and label only as
+// many equally-spaced periods as fit legibly -- leaving the rest unlabelled rather
+// than cramming every label in or shrinking them to fit.
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 
@@ -47,23 +52,20 @@ async function main() {
   await page.waitForSelector("#results:not([hidden])", { timeout: 10000 });
 
   async function measure(label) {
-    // font-size of the first rendered label, spacing between consecutive labels
-    // (the actual readability metric for a scrollable chart -- total label count
-    // across the whole scrollable width isn't, since only ~one viewport's worth is
-    // ever visible at once), and total svg width vs container width.
     const info = await page.evaluate(() => {
       const svg = document.querySelector("#volume-chart");
       const labels = Array.from(svg.querySelectorAll("text.volume-chart-label"));
       const rects = labels.map((t) => t.getBoundingClientRect());
-      const gaps = rects.slice(1).map((r, i) => r.x - rects[i].x);
+      const sortedRects = [...rects].sort((a, b) => a.x - b.x);
+      const gaps = sortedRects.slice(1).map((r, i) => r.x - sortedRects[i].x);
       const container = document.querySelector(".chart-wrap");
       return {
-        svgWidthAttr: svg.getAttribute("width"),
+        svgWidthAttr: Number(svg.getAttribute("width")),
+        dotCount: svg.querySelectorAll("circle.volume-dot").length,
+        hasLine: !!svg.querySelector("path.volume-line"),
         labelCount: labels.length,
-        barCount: svg.querySelectorAll("rect.volume-bar").length,
-        firstLabelHeightPx: rects[0].height,
+        firstLabelHeightPx: rects[0]?.height ?? null,
         minGapBetweenLabelsPx: gaps.length ? Math.min(...gaps) : null,
-        labelsPerViewport: container.clientWidth / (gaps[0] ?? container.clientWidth),
         containerClientWidth: container.clientWidth,
         containerScrollWidth: container.scrollWidth,
       };
@@ -72,26 +74,41 @@ async function main() {
     return info;
   }
 
-  console.log("--- Few buckets: 90 days / month period (3-4 buckets) ---");
+  console.log("--- Few periods: 90 days / month period (3-4 points) ---");
   await page.selectOption("#range-preset", "last90");
   await page.selectOption("#period-select", "month");
-  await page.waitForTimeout(800);
-  const fewBucketsInfo = await measure("few-buckets");
+  await page.waitForTimeout(500);
+  const few = await measure("few-periods");
 
-  console.log("--- Many buckets: 12 months / day period (~365 buckets) ---");
+  console.log("--- Many periods: 12 months / day period (~350+ points) ---");
   await page.selectOption("#range-preset", "last12months");
   await page.selectOption("#period-select", "day");
-  await page.waitForTimeout(800);
-  const manyBucketsInfo = await measure("many-buckets");
+  await page.waitForTimeout(500);
+  const many = await measure("many-periods");
 
-  const heightDiff = Math.abs(fewBucketsInfo.firstLabelHeightPx - manyBucketsInfo.firstLabelHeightPx);
-  console.log(`\nLabel height few=${fewBucketsInfo.firstLabelHeightPx.toFixed(2)}px many=${manyBucketsInfo.firstLabelHeightPx.toFixed(2)}px diff=${heightDiff.toFixed(2)}px`);
-  if (heightDiff > 1) throw new Error("Label text size differs meaningfully between few-bucket and many-bucket views -- distortion bug not fixed");
-  if (manyBucketsInfo.containerScrollWidth <= manyBucketsInfo.containerClientWidth) throw new Error("Many-bucket chart didn't grow wider than its container -- horizontal scroll won't kick in");
-  if (manyBucketsInfo.minGapBetweenLabelsPx < 55) throw new Error(`Labels are packed too tightly in the many-bucket view (min gap ${manyBucketsInfo.minGapBetweenLabelsPx}px) -- would overlap/be unreadable`);
-  if (manyBucketsInfo.labelsPerViewport > 20) throw new Error(`Too many labels visible within one viewport width (${manyBucketsInfo.labelsPerViewport.toFixed(1)}) -- stride logic isn't thinning them enough`);
-  console.log(`\nLabels per viewport: few=${fewBucketsInfo.labelsPerViewport?.toFixed(1) ?? "n/a"} many=${manyBucketsInfo.labelsPerViewport.toFixed(1)}`);
-  console.log("CHART SIZE/DISTORTION CHECKS PASSED");
+  function assert(cond, msg) {
+    if (!cond) throw new Error("ASSERTION FAILED: " + msg);
+    console.log("  ok:", msg);
+  }
+
+  assert(few.hasLine && many.hasLine, "a line is drawn in both the few- and many-period views");
+  assert(few.svgWidthAttr === few.containerClientWidth, `few-period chart width exactly matches its container (${few.svgWidthAttr} vs ${few.containerClientWidth})`);
+  assert(many.svgWidthAttr === many.containerClientWidth, `many-period chart width exactly matches its container (${many.svgWidthAttr} vs ${many.containerClientWidth})`);
+  assert(few.containerScrollWidth === few.containerClientWidth, "few-period view never needs to scroll horizontally");
+  assert(many.containerScrollWidth === many.containerClientWidth, `many-period view (${many.dotCount} points) never needs to scroll horizontally either`);
+
+  assert(few.dotCount >= 3 && few.dotCount <= 5, `few-period view plots one point per month bucket (got ${few.dotCount})`);
+  assert(many.dotCount > 340, `many-period view plots every single day as a point, none dropped (got ${many.dotCount})`);
+
+  assert(few.labelCount === few.dotCount, `with few periods, every one gets its own label (got ${few.labelCount} labels for ${few.dotCount} points)`);
+  assert(many.labelCount < many.dotCount, `with many periods, not every one gets a label (got ${many.labelCount} labels for ${many.dotCount} points)`);
+  assert(many.labelCount >= 2 && many.labelCount <= 15, `many-period view still shows a reasonable, evenly-spaced number of labels (got ${many.labelCount})`);
+
+  const heightDiff = Math.abs(few.firstLabelHeightPx - many.firstLabelHeightPx);
+  assert(heightDiff <= 1, `label text renders at the same real size regardless of period count (few=${few.firstLabelHeightPx}px many=${many.firstLabelHeightPx}px)`);
+  assert(many.minGapBetweenLabelsPx >= 55, `labels stay legibly spaced even with many periods selected (min gap ${many.minGapBetweenLabelsPx}px)`);
+
+  console.log("\nALL CHART FIT/LABEL-DENSITY CHECKS PASSED");
 
   await browser.close();
   await service.from("tenants").delete().eq("id", tenant.id);

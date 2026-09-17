@@ -813,21 +813,24 @@ body.app .site-footer { margin-left: 220px; }
 
 /* Analytics -- Volume page */
 .chart-wrap {
-  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 0.375rem;
   background: var(--surface-2);
-  padding: 0.75rem 0.5rem 0;
+  padding: 0.75rem 0 0;
   margin-bottom: 1.25rem;
 }
 
-/* No min-width here on purpose: the chart's own width attribute (set in JS,
-   proportional to how many periods are plotted) is what should determine its
-   rendered size -- forcing it to at least fill the container is what caused the
-   stretch-distortion bug with few periods. */
+/* The chart's own width attribute (set in JS, from the container's measured
+   clientWidth) is what determines its rendered size -- it always exactly fits, so
+   there's nothing here for CSS to constrain or stretch. No horizontal padding on
+   .chart-wrap on purpose: the chart's own CHART_PADDING_X already reserves edge
+   space for the first/last point and label, and clientWidth includes padding, so
+   left/right padding here would make the svg (sized to that same clientWidth)
+   overflow its container by exactly that padding amount. */
 #volume-chart { display: block; }
 
-.volume-bar { fill: var(--signal); }
+.volume-line { fill: none; stroke: var(--signal); stroke-width: 2; }
+.volume-dot { fill: var(--signal); }
 
 .volume-chart-label,
 .volume-chart-baseline { color: var(--ash); }

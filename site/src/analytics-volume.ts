@@ -196,72 +196,96 @@ function renderTable(buckets: Bucket[], sums: Map<string, number>): void {
   }
 }
 
-// Fixed, real pixel units throughout (no viewBox stretching via width="100%" +
-// preserveAspectRatio="none") -- that combo was the bug: it forced the whole
-// coordinate system, bars AND text, to scale to fill whatever the container
-// happened to be, so labels warped when there were few buckets and shrank to
-// unreadable slivers when there were many. Bar slots stay a constant physical
-// width, so the chart's total width simply grows with the bucket count and the
-// container's own overflow-x: auto scrolls it -- label text is always rendered at
-// its real, undistorted font size.
-const MIN_CHART_WIDTH_PX = 320;
-const BASE_BAR_SLOT_PX = 36;
+// Always fits the available width, never scrolls -- a year plotted by day needs to
+// be readable as one whole shape, not spread across an off-screen strip. viewBox and
+// rendered width are always set to the SAME real pixel number (the container's own
+// clientWidth), so 1 user unit is always 1 real px regardless of how many periods
+// are plotted -- nothing here ever gets stretched or shrunk (that mismatch, via
+// width="100%" + preserveAspectRatio="none" on a viewBox sized to bucket count, was
+// the earlier bug). A line, not bars, is what makes many-point ranges (e.g. a year
+// by day) legible in fixed width: bars that thin than a couple of px wide stop
+// reading as bars at all, where a line stays a continuous, readable shape at any
+// point density.
 const MIN_LABEL_SPACING_PX = 70; // comfortably fits the longest label variant ("Week of Jan 5")
+const CHART_PADDING_X = 8;
+const DEFAULT_CHART_WIDTH_PX = 640; // only used if the container hasn't been laid out yet
+
+// Re-rendered on window resize (see main()) so the chart keeps fitting its
+// container exactly -- re-drawn from these already-fetched values, no re-query.
+let lastRenderedChart: { buckets: Bucket[]; sums: Map<string, number> } | null = null;
 
 function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
+  lastRenderedChart = { buckets, sums };
   while (chartSvg.firstChild) chartSvg.removeChild(chartSvg.firstChild);
 
   const values = buckets.map((b) => sums.get(b.key) ?? 0);
   const max = Math.max(1, ...values);
   const n = Math.max(1, buckets.length);
-  const width = Math.max(MIN_CHART_WIDTH_PX, n * BASE_BAR_SLOT_PX);
+
+  const width = chartSvg.parentElement?.clientWidth || DEFAULT_CHART_WIDTH_PX;
+  const innerLeft = CHART_PADDING_X;
+  const innerRight = width - CHART_PADDING_X;
+  const innerWidth = Math.max(1, innerRight - innerLeft);
   const innerHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
-  const barSlot = width / n;
-  const barWidth = Math.max(4, barSlot * 0.6);
-  // Space labels by real pixels, not by a fixed label count -- however many
-  // buckets fit, every Nth one gets a label so consecutive labels stay legibly
-  // apart; the rest are left unlabelled rather than crammed in or omitted wholesale.
-  const labelStride = Math.max(1, Math.round(MIN_LABEL_SPACING_PX / barSlot));
 
   chartSvg.setAttribute("viewBox", `0 0 ${width} ${CHART_HEIGHT}`);
   chartSvg.setAttribute("width", String(width));
   chartSvg.setAttribute("height", String(CHART_HEIGHT));
 
   const svgNS = "http://www.w3.org/2000/svg";
+  const xForIndex = (i: number): number => (n === 1 ? innerLeft + innerWidth / 2 : innerLeft + (i / (n - 1)) * innerWidth);
 
-  buckets.forEach((bucket, i) => {
+  // However many labels fit legibly across the available width, spread that many
+  // equally-spaced periods' labels across the full range and leave the rest
+  // unlabelled -- every period is still plotted on the line regardless.
+  const maxLabels = Math.max(2, Math.floor(innerWidth / MIN_LABEL_SPACING_PX) + 1);
+  const labelIndexes = new Set<number>();
+  if (n <= maxLabels) {
+    for (let i = 0; i < n; i++) labelIndexes.add(i);
+  } else {
+    for (let j = 0; j < maxLabels; j++) labelIndexes.add(Math.round((j * (n - 1)) / (maxLabels - 1)));
+  }
+
+  const points = buckets.map((bucket, i) => {
     const value = values[i];
-    const barHeight = max > 0 ? (value / max) * innerHeight : 0;
-    const x = i * barSlot + (barSlot - barWidth) / 2;
-    const y = CHART_PADDING_TOP + (innerHeight - barHeight);
+    const y = CHART_PADDING_TOP + innerHeight - (max > 0 ? (value / max) * innerHeight : 0);
+    return { x: xForIndex(i), y, value, bucket };
+  });
 
-    const rect = document.createElementNS(svgNS, "rect");
-    rect.setAttribute("x", String(x));
-    rect.setAttribute("y", String(y));
-    rect.setAttribute("width", String(barWidth));
-    rect.setAttribute("height", String(Math.max(0, barHeight)));
-    rect.setAttribute("class", "volume-bar");
-    rect.setAttribute("data-bucket-key", bucket.key);
-    rect.setAttribute("data-value", String(value));
+  const path = document.createElementNS(svgNS, "path");
+  path.setAttribute("d", points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" "));
+  path.setAttribute("class", "volume-line");
+  chartSvg.appendChild(path);
+
+  points.forEach((p, i) => {
+    const dot = document.createElementNS(svgNS, "circle");
+    dot.setAttribute("cx", String(p.x));
+    dot.setAttribute("cy", String(p.y));
+    dot.setAttribute("r", "3");
+    dot.setAttribute("class", "volume-dot");
+    dot.setAttribute("data-bucket-key", p.bucket.key);
+    dot.setAttribute("data-value", String(p.value));
     const title = document.createElementNS(svgNS, "title");
-    title.textContent = `${bucket.label}: ${value}`;
-    rect.appendChild(title);
-    chartSvg.appendChild(rect);
+    title.textContent = `${p.bucket.label}: ${p.value}`;
+    dot.appendChild(title);
+    chartSvg.appendChild(dot);
 
-    if (i % labelStride === 0) {
+    if (labelIndexes.has(i)) {
       const text = document.createElementNS(svgNS, "text");
-      text.setAttribute("x", String(x + barWidth / 2));
+      text.setAttribute("x", String(p.x));
       text.setAttribute("y", String(CHART_HEIGHT - 10));
       text.setAttribute("class", "volume-chart-label");
-      text.setAttribute("text-anchor", "middle");
-      text.textContent = bucket.label;
+      // The first/last labels anchor outward (start/end) instead of centering, so
+      // they extend inward from the chart's edge rather than overflowing past it.
+      text.setAttribute("text-anchor", i === 0 ? "start" : i === n - 1 ? "end" : "middle");
+      text.textContent = p.bucket.label;
       chartSvg.appendChild(text);
     }
   });
 
   const baseline = document.createElementNS(svgNS, "line");
-  baseline.setAttribute("x1", "0");
-  baseline.setAttribute("x2", String(width));
+  baseline.setAttribute("x1", String(innerLeft));
+  baseline.setAttribute("x2", String(innerRight));
   baseline.setAttribute("y1", String(CHART_PADDING_TOP + innerHeight));
   baseline.setAttribute("y2", String(CHART_PADDING_TOP + innerHeight));
   baseline.setAttribute("class", "volume-chart-baseline");
@@ -383,6 +407,14 @@ async function main() {
   widgetModeSelect.addEventListener("change", () => {
     widgetChecklist.hidden = false;
     loadAndRender();
+  });
+
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (lastRenderedChart) renderChart(lastRenderedChart.buckets, lastRenderedChart.sums);
+    }, 150);
   });
 
   await loadAndRender();
