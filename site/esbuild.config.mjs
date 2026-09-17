@@ -13,6 +13,7 @@ await build({
     "src/widget-settings.ts",
     "src/knowledge-base-review.ts",
     "src/knowledge-base-embed.ts",
+    "src/analytics-volume.ts",
   ],
   bundle: true,
   minify: true,
@@ -22,5 +23,5 @@ await build({
 });
 
 console.log(
-  "site: built login.js, app-shell.js, settings.js, widgets.js, widget-new.js, widget-settings.js, knowledge-base-review.js, knowledge-base-embed.js -> worker/public/",
+  "site: built login.js, app-shell.js, settings.js, widgets.js, widget-new.js, widget-settings.js, knowledge-base-review.js, knowledge-base-embed.js, analytics-volume.js -> worker/public/",
 );

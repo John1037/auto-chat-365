@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Volume — AutoChat 365</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="app">
+  <header class="topbar">
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true">
+        <rect x="18" y="18" width="60" height="60" rx="15" fill="var(--paper)" />
+        <rect x="52" y="52" width="34" height="34" rx="10" fill="var(--signal)" />
+      </svg>
+      <span class="brand-word">AutoChat 365</span>
+    </a>
+    <nav class="topbar-actions">
+      <a class="topbar-link" href="#" id="sign-out">Log out</a>
+      <a class="avatar" href="/settings.html" aria-label="Your profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" fill="currentColor" />
+          <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="currentColor" />
+        </svg>
+      </a>
+    </nav>
+  </header>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <details class="sidebar-item">
+        <summary>Widgets</summary>
+        <a href="/dashboard.html">All widgets</a>
+        <div class="sidebar-widget-list" id="sidebar-widget-list"></div>
+        <a href="/widget-new.html">New widget</a>
+      </details>
+      <details class="sidebar-item">
+        <summary>Knowledge Base</summary>
+        <a href="/knowledge-base.html">Review Documents</a>
+        <a href="/knowledge-base-embed.html">Embed Document</a>
+        <a href="/knowledge-base-analysis.html">Analysis</a>
+      </details>
+      <details class="sidebar-item" open>
+        <summary>Analytics</summary>
+        <a href="/analytics-volume.html" class="active">Volume</a>
+      </details>
+      <details class="sidebar-item">
+        <summary>Settings</summary>
+        <a href="/settings.html">Overview</a>
+      </details>
+    </nav>
+    <main class="workspace">
+      <h1>Volume</h1>
+      <p class="field-hint">
+        Conversation and message volume across your widgets. Other analytics (guardrail activity, response
+        latency, resolution rate) will get their own pages here as those features mature.
+      </p>
+
+      <fieldset class="settings-section">
+        <legend>Filters</legend>
+        <div class="field-tiles">
+          <div class="field-tile">
+            <label for="range-preset">Date range</label>
+            <select id="range-preset">
+              <option value="last7">Last 7 days</option>
+              <option value="last30" selected>Last 30 days</option>
+              <option value="last90">Last 90 days</option>
+              <option value="month_to_date">Month to date</option>
+              <option value="last12months">Last 12 months</option>
+              <option value="custom">Custom range</option>
+            </select>
+          </div>
+          <div class="field-tile">
+            <label for="period-select">Display period</label>
+            <select id="period-select">
+              <option value="day" selected>Day</option>
+              <option value="week">Week</option>
+              <option value="month">Month</option>
+            </select>
+          </div>
+          <div class="field-tile">
+            <label for="metric-select">Metric</label>
+            <select id="metric-select">
+              <option value="conversations_started" selected>Conversations</option>
+              <option value="messages_count">Messages</option>
+              <option value="tool_calls_count">Tool calls</option>
+              <option value="skill_uses_count">Skill uses</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-tiles" id="custom-range-row" hidden>
+          <div class="field-tile">
+            <label for="range-start">Start date</label>
+            <input type="date" id="range-start" />
+          </div>
+          <div class="field-tile">
+            <label for="range-end">End date</label>
+            <input type="date" id="range-end" />
+          </div>
+        </div>
+
+        <label class="field-label">Widgets</label>
+        <label class="radio-label"><input type="radio" name="widget-mode" id="widget-mode-all" value="all" checked /> All widgets</label>
+        <label class="radio-label"><input type="radio" name="widget-mode" id="widget-mode-select" value="select" /> Select widgets</label>
+        <div class="checkbox-list" id="widget-checklist" hidden>
+          <p id="widget-checklist-empty" hidden>No widgets yet.</p>
+        </div>
+      </fieldset>
+
+      <p id="loading">Loading...</p>
+      <p id="error" class="status error" hidden>Something went wrong loading your analytics. Try refreshing.</p>
+      <p id="empty-range" hidden>No data for this range yet.</p>
+
+      <div id="results" hidden>
+        <div class="chart-wrap">
+          <svg id="volume-chart" role="img" aria-label="Volume chart"></svg>
+        </div>
+        <table class="volume-table" id="volume-table">
+          <thead><tr><th>Period</th><th id="volume-table-metric-header">Conversations</th></tr></thead>
+          <tbody id="volume-table-body"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <footer class="site-footer">
+    <span>&copy; 2026 AutoChat 365</span>
+    <nav class="footer-links">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </nav>
+  </footer>
+  <script type="module" src="/analytics-volume.js"></script>
+</body>
+</html>

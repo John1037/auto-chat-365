@@ -299,6 +299,7 @@ body.app {
 input[type="email"],
 input[type="text"],
 input[type="number"],
+input[type="date"],
 textarea {
   display: block;
   width: 100%;
@@ -809,5 +810,39 @@ body.app .site-footer { margin-left: 220px; }
 }
 .button-danger:hover:not(:disabled) { background: #c96a5a; }
 .button-danger:disabled { opacity: 0.5; cursor: default; }
+
+/* Analytics -- Volume page */
+.chart-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+  background: var(--surface-2);
+  padding: 0.75rem 0.5rem 0;
+  margin-bottom: 1.25rem;
+}
+
+#volume-chart { display: block; min-width: 100%; }
+
+.volume-bar { fill: var(--signal); }
+
+.volume-chart-label,
+.volume-chart-baseline { color: var(--ash); }
+.volume-chart-label { font-size: 10px; font-family: 'Karla', sans-serif; fill: var(--ash); }
+.volume-chart-baseline { stroke: var(--line); stroke-width: 1; }
+
+.volume-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.volume-table th,
+.volume-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.volume-table th { color: var(--ash); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.volume-table td { color: var(--paper); font-family: 'IBM Plex Mono', monospace; }
+.volume-table td:first-child { font-family: 'Karla', sans-serif; color: var(--ash); }
 
 [hidden] { display: none !important; }
