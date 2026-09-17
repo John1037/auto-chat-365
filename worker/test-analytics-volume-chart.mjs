@@ -1,8 +1,9 @@
-// Real Playwright check for the Analytics > Volume line chart: it must always fit
-// the available width (no horizontal scrollbar, whether plotting 4 periods or 365),
-// plot every period as a point on the line regardless of count, and label only as
-// many equally-spaced periods as fit legibly -- leaving the rest unlabelled rather
-// than cramming every label in or shrinking them to fit.
+// Real Playwright check for the Analytics > Volume chart: it must always fit the
+// available width (no horizontal scrollbar, whether plotting 4 periods or 365),
+// plot every period regardless of count, and label only as many equally-spaced
+// periods as fit legibly. Also covers the exact/smooth line-style toggle (default
+// smooth, no dots -- switching to exact draws a dot per point and a straight-segment
+// path), the y-axis labels (0 / 50% / max), and the data table starting collapsed.
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 
@@ -17,6 +18,11 @@ function isoDaysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
+function assert(cond, msg) {
+  if (!cond) throw new Error("ASSERTION FAILED: " + msg);
+  console.log("  ok:", msg);
+}
+
 async function main() {
   const service = createClient(SUPABASE_URL, SERVICE_KEY);
   const anon = createClient(SUPABASE_URL, ANON_KEY);
@@ -29,6 +35,7 @@ async function main() {
 
   // Seed 400 days of data so "last 12 months / day" has plenty of real buckets,
   // and also seed within the last 90 days for the "90 days / month" few-bucket case.
+  // Values are never all equal, so max > 0 and the 50%/max y-axis labels are meaningful.
   const rows = [];
   for (let i = 0; i < 400; i++) {
     rows.push({ widget_id: widget.id, tenant_id: tenant.id, stat_date: isoDaysAgo(i), conversations_started: 1 + (i % 7), messages_count: 3 + (i % 11) });
@@ -51,45 +58,81 @@ async function main() {
   await page.goto(`${API_BASE}/analytics-volume.html#${hash}`);
   await page.waitForSelector("#results:not([hidden])", { timeout: 10000 });
 
-  async function measure(label) {
-    const info = await page.evaluate(() => {
+  async function measure() {
+    return page.evaluate(() => {
       const svg = document.querySelector("#volume-chart");
       const labels = Array.from(svg.querySelectorAll("text.volume-chart-label"));
       const rects = labels.map((t) => t.getBoundingClientRect());
       const sortedRects = [...rects].sort((a, b) => a.x - b.x);
       const gaps = sortedRects.slice(1).map((r, i) => r.x - sortedRects[i].x);
       const container = document.querySelector(".chart-wrap");
+      const path = svg.querySelector("path.volume-line");
+      const axisLabels = Array.from(svg.querySelectorAll("text.volume-chart-axis-label")).map((t) => t.textContent);
       return {
         svgWidthAttr: Number(svg.getAttribute("width")),
         dotCount: svg.querySelectorAll("circle.volume-dot").length,
-        hasLine: !!svg.querySelector("path.volume-line"),
+        hasLine: !!path,
+        pathUsesCurve: path?.getAttribute("d")?.includes("C") ?? false,
         labelCount: labels.length,
         firstLabelHeightPx: rects[0]?.height ?? null,
         minGapBetweenLabelsPx: gaps.length ? Math.min(...gaps) : null,
         containerClientWidth: container.clientWidth,
         containerScrollWidth: container.scrollWidth,
+        axisLabels,
       };
     });
-    console.log(label, JSON.stringify(info));
-    return info;
   }
 
-  console.log("--- Few periods: 90 days / month period (3-4 points) ---");
+  console.log("--- Default state: smooth toggle checked, no dots, curved path, 3 y-axis labels ---");
+  {
+    const smoothChecked = await page.$eval("#smooth-toggle", (el) => el.checked);
+    assert(smoothChecked, "the smooth/exact toggle defaults to checked (smooth)");
+    const info = await measure();
+    console.log("  " + JSON.stringify(info));
+    assert(info.hasLine, "a line path is drawn by default");
+    assert(info.dotCount === 0, `no per-point dots are drawn in the default smooth mode (got ${info.dotCount})`);
+    assert(info.pathUsesCurve, "the default path uses curve (C) commands, not just straight segments");
+    assert(info.axisLabels.length === 3, `y-axis shows exactly 3 labels: zero, 50%, and max (got ${JSON.stringify(info.axisLabels)})`);
+    assert(info.axisLabels[0] === "0", `first y-axis label is zero (got '${info.axisLabels[0]}')`);
+  }
+
+  console.log("--- Switching to 'Exact': dots appear, path becomes straight-segment ---");
+  await page.click(".toggle-switch-row"); // unchecks the smooth toggle
+  await page.waitForTimeout(200);
+  {
+    const smoothChecked = await page.$eval("#smooth-toggle", (el) => el.checked);
+    assert(!smoothChecked, "toggle is now unchecked (exact)");
+    const info = await measure();
+    assert(info.dotCount > 0, `exact mode draws a dot per plotted point (got ${info.dotCount})`);
+    assert(!info.pathUsesCurve, "exact mode's path uses only straight (M/L) segments, no curves");
+  }
+
+  console.log("--- Data table starts collapsed, opens on click ---");
+  {
+    const details = page.locator("#volume-table-details");
+    assert(!(await details.evaluate((el) => el.open)), "the data table <details> starts closed by default");
+    const rowsVisibleBeforeOpen = await page.locator("#volume-table-body tr").first().isVisible();
+    assert(!rowsVisibleBeforeOpen, "table rows are not visible while the details element is collapsed");
+    await page.click("#volume-table-details summary");
+    await page.waitForTimeout(100);
+    assert(await details.evaluate((el) => el.open), "clicking the summary opens the details element");
+    const rowsVisibleAfterOpen = await page.locator("#volume-table-body tr").first().isVisible();
+    assert(rowsVisibleAfterOpen, "table rows become visible once opened");
+  }
+
+  console.log("--- Few periods: 90 days / month period (3-4 points), back in exact mode ---");
   await page.selectOption("#range-preset", "last90");
   await page.selectOption("#period-select", "month");
   await page.waitForTimeout(500);
-  const few = await measure("few-periods");
+  const few = await measure();
+  console.log("  " + JSON.stringify(few));
 
   console.log("--- Many periods: 12 months / day period (~350+ points) ---");
   await page.selectOption("#range-preset", "last12months");
   await page.selectOption("#period-select", "day");
   await page.waitForTimeout(500);
-  const many = await measure("many-periods");
-
-  function assert(cond, msg) {
-    if (!cond) throw new Error("ASSERTION FAILED: " + msg);
-    console.log("  ok:", msg);
-  }
+  const many = await measure();
+  console.log("  " + JSON.stringify(many));
 
   assert(few.hasLine && many.hasLine, "a line is drawn in both the few- and many-period views");
   assert(few.svgWidthAttr === few.containerClientWidth, `few-period chart width exactly matches its container (${few.svgWidthAttr} vs ${few.containerClientWidth})`);
@@ -108,7 +151,9 @@ async function main() {
   assert(heightDiff <= 1, `label text renders at the same real size regardless of period count (few=${few.firstLabelHeightPx}px many=${many.firstLabelHeightPx}px)`);
   assert(many.minGapBetweenLabelsPx >= 55, `labels stay legibly spaced even with many periods selected (min gap ${many.minGapBetweenLabelsPx}px)`);
 
-  console.log("\nALL CHART FIT/LABEL-DENSITY CHECKS PASSED");
+  assert(many.axisLabels.length === 3, `y-axis still shows exactly 3 labels in the many-period view (got ${JSON.stringify(many.axisLabels)})`);
+
+  console.log("\nALL CHART FEATURE CHECKS PASSED");
 
   await browser.close();
   await service.from("tenants").delete().eq("id", tenant.id);

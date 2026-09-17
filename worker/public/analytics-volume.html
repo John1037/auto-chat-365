@@ -111,6 +111,16 @@
         <div class="checkbox-list" id="widget-checklist" hidden>
           <p id="widget-checklist-empty" hidden>No widgets yet.</p>
         </div>
+
+        <label class="field-label">Line style</label>
+        <label class="toggle-switch-row">
+          <span class="toggle-switch-option">Exact</span>
+          <span class="toggle-switch">
+            <input type="checkbox" id="smooth-toggle" checked />
+            <span class="toggle-switch-slider"></span>
+          </span>
+          <span class="toggle-switch-option">Smooth</span>
+        </label>
       </fieldset>
 
       <p id="loading">Loading...</p>
@@ -121,10 +131,13 @@
         <div class="chart-wrap">
           <svg id="volume-chart" role="img" aria-label="Volume chart"></svg>
         </div>
-        <table class="volume-table" id="volume-table">
-          <thead><tr><th>Period</th><th id="volume-table-metric-header">Conversations</th></tr></thead>
-          <tbody id="volume-table-body"></tbody>
-        </table>
+        <details id="volume-table-details">
+          <summary>Show data table</summary>
+          <table class="volume-table" id="volume-table">
+            <thead><tr><th>Period</th><th id="volume-table-metric-header">Conversations</th></tr></thead>
+            <tbody id="volume-table-body"></tbody>
+          </table>
+        </details>
       </div>
     </main>
   </div>

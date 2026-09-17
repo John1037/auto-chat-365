@@ -178,6 +178,7 @@ const widgetChecklistEmpty = document.querySelector<HTMLElement>("#widget-checkl
 
 const chartSvg = document.querySelector<SVGSVGElement>("#volume-chart")!;
 const tableBody = document.querySelector<HTMLElement>("#volume-table-body")!;
+const smoothToggle = document.querySelector<HTMLInputElement>("#smooth-toggle")!;
 
 const CHART_HEIGHT = 220;
 const CHART_PADDING_TOP = 16;
@@ -207,12 +208,64 @@ function renderTable(buckets: Bucket[], sums: Map<string, number>): void {
 // reading as bars at all, where a line stays a continuous, readable shape at any
 // point density.
 const MIN_LABEL_SPACING_PX = 70; // comfortably fits the longest label variant ("Week of Jan 5")
-const CHART_PADDING_X = 8;
+const CHART_PADDING_RIGHT = 8;
+const CHART_PADDING_LEFT = 38; // room for the y-axis value labels (0 / 50% / max)
 const DEFAULT_CHART_WIDTH_PX = 640; // only used if the container hasn't been laid out yet
 
-// Re-rendered on window resize (see main()) so the chart keeps fitting its
-// container exactly -- re-drawn from these already-fetched values, no re-query.
+// Re-rendered on window resize and on line-style toggle (see main()) so the chart
+// keeps fitting its container exactly and switches style without a re-query --
+// re-drawn from these already-fetched values.
 let lastRenderedChart: { buckets: Bucket[]; sums: Map<string, number> } | null = null;
+
+function formatAxisValue(value: number): string {
+  return Math.round(value).toLocaleString();
+}
+
+// A centered moving average, not just a spline through the raw values -- real
+// day-to-day data is often too noisy for an interpolating curve alone to look
+// "smooth" (a spline that has to visit every jagged value stays jagged, just with
+// rounded corners). Averaging first is what makes the curve run along the data's
+// actual trend ("best fit") rather than tracing its noise. Window widens with n so
+// a long range gets meaningfully smoothed while a short one (too little data for
+// "noise" to mean anything) is left close to untouched.
+function smoothValues(values: number[]): number[] {
+  const n = values.length;
+  if (n < 5) return values.slice();
+  const halfWindow = Math.max(1, Math.round(n / 30));
+  return values.map((_, i) => {
+    const lo = Math.max(0, i - halfWindow);
+    const hi = Math.min(n - 1, i + halfWindow);
+    let sum = 0;
+    for (let j = lo; j <= hi; j++) sum += values[j];
+    return sum / (hi - lo + 1);
+  });
+}
+
+// Standard uniform Catmull-Rom-to-Bezier conversion: a smooth curve with each
+// segment's control points derived from its neighbours so it has no sharp corners.
+// Run over the moving-averaged values above, not the raw ones -- see smoothValues.
+// Falls back to duplicating the endpoint for the first/last segment, which is the
+// usual way to handle a spline having no neighbour beyond the ends.
+function buildSmoothPath(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return points.length === 1 ? `M ${points[0].x} ${points[0].y}` : "";
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? 0 : i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
+function buildStraightPath(points: { x: number; y: number }[]): string {
+  return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+}
 
 function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
   lastRenderedChart = { buckets, sums };
@@ -221,10 +274,11 @@ function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
   const values = buckets.map((b) => sums.get(b.key) ?? 0);
   const max = Math.max(1, ...values);
   const n = Math.max(1, buckets.length);
+  const smooth = smoothToggle.checked;
 
   const width = chartSvg.parentElement?.clientWidth || DEFAULT_CHART_WIDTH_PX;
-  const innerLeft = CHART_PADDING_X;
-  const innerRight = width - CHART_PADDING_X;
+  const innerLeft = CHART_PADDING_LEFT;
+  const innerRight = width - CHART_PADDING_RIGHT;
   const innerWidth = Math.max(1, innerRight - innerLeft);
   const innerHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
 
@@ -246,29 +300,63 @@ function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
     for (let j = 0; j < maxLabels; j++) labelIndexes.add(Math.round((j * (n - 1)) / (maxLabels - 1)));
   }
 
+  // Dots and tooltips (exact mode) always reflect the real recorded value; only the
+  // smooth curve's own shape is drawn from the moving-averaged values.
+  const displayValues = smooth ? smoothValues(values) : values;
   const points = buckets.map((bucket, i) => {
-    const value = values[i];
-    const y = CHART_PADDING_TOP + innerHeight - (max > 0 ? (value / max) * innerHeight : 0);
-    return { x: xForIndex(i), y, value, bucket };
+    const displayValue = displayValues[i];
+    const y = CHART_PADDING_TOP + innerHeight - (max > 0 ? (displayValue / max) * innerHeight : 0);
+    return { x: xForIndex(i), y, value: values[i], bucket };
   });
 
+  // Y-axis: zero, half, and max value, each with a faint gridline at its height.
+  const yAxisStops = [
+    { value: 0, y: CHART_PADDING_TOP + innerHeight },
+    { value: max / 2, y: CHART_PADDING_TOP + innerHeight / 2 },
+    { value: max, y: CHART_PADDING_TOP },
+  ];
+  for (const stop of yAxisStops) {
+    const gridline = document.createElementNS(svgNS, "line");
+    gridline.setAttribute("x1", String(innerLeft));
+    gridline.setAttribute("x2", String(innerRight));
+    gridline.setAttribute("y1", String(stop.y));
+    gridline.setAttribute("y2", String(stop.y));
+    gridline.setAttribute("class", "volume-chart-gridline");
+    chartSvg.appendChild(gridline);
+
+    const label = document.createElementNS(svgNS, "text");
+    label.setAttribute("x", String(innerLeft - 6));
+    // Nudge the max/zero labels inward from the gridline itself so their text sits
+    // just above/below it rather than being bisected by it.
+    label.setAttribute("y", String(stop.value === max ? stop.y + 9 : stop.value === 0 ? stop.y - 3 : stop.y + 3));
+    label.setAttribute("class", "volume-chart-axis-label");
+    label.setAttribute("text-anchor", "end");
+    label.textContent = formatAxisValue(stop.value);
+    chartSvg.appendChild(label);
+  }
+
   const path = document.createElementNS(svgNS, "path");
-  path.setAttribute("d", points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" "));
+  path.setAttribute("d", smooth ? buildSmoothPath(points) : buildStraightPath(points));
   path.setAttribute("class", "volume-line");
   chartSvg.appendChild(path);
 
   points.forEach((p, i) => {
-    const dot = document.createElementNS(svgNS, "circle");
-    dot.setAttribute("cx", String(p.x));
-    dot.setAttribute("cy", String(p.y));
-    dot.setAttribute("r", "3");
-    dot.setAttribute("class", "volume-dot");
-    dot.setAttribute("data-bucket-key", p.bucket.key);
-    dot.setAttribute("data-value", String(p.value));
-    const title = document.createElementNS(svgNS, "title");
-    title.textContent = `${p.bucket.label}: ${p.value}`;
-    dot.appendChild(title);
-    chartSvg.appendChild(dot);
+    // Exact mode plots every point as a dot; smooth mode shows only the curve, per
+    // the toggle's own definition -- the points aren't hidden data, they're still
+    // fully present in the underlying table and in the curve's own shape.
+    if (!smooth) {
+      const dot = document.createElementNS(svgNS, "circle");
+      dot.setAttribute("cx", String(p.x));
+      dot.setAttribute("cy", String(p.y));
+      dot.setAttribute("r", "3");
+      dot.setAttribute("class", "volume-dot");
+      dot.setAttribute("data-bucket-key", p.bucket.key);
+      dot.setAttribute("data-value", String(p.value));
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = `${p.bucket.label}: ${p.value}`;
+      dot.appendChild(title);
+      chartSvg.appendChild(dot);
+    }
 
     if (labelIndexes.has(i)) {
       const text = document.createElementNS(svgNS, "text");
@@ -282,14 +370,6 @@ function renderChart(buckets: Bucket[], sums: Map<string, number>): void {
       chartSvg.appendChild(text);
     }
   });
-
-  const baseline = document.createElementNS(svgNS, "line");
-  baseline.setAttribute("x1", String(innerLeft));
-  baseline.setAttribute("x2", String(innerRight));
-  baseline.setAttribute("y1", String(CHART_PADDING_TOP + innerHeight));
-  baseline.setAttribute("y2", String(CHART_PADDING_TOP + innerHeight));
-  baseline.setAttribute("class", "volume-chart-baseline");
-  chartSvg.appendChild(baseline);
 }
 
 function renderWidgetChecklist(widgets: WidgetOption[], onChange: () => void): void {
@@ -407,6 +487,10 @@ async function main() {
   widgetModeSelect.addEventListener("change", () => {
     widgetChecklist.hidden = false;
     loadAndRender();
+  });
+
+  smoothToggle.addEventListener("change", () => {
+    if (lastRenderedChart) renderChart(lastRenderedChart.buckets, lastRenderedChart.sums);
   });
 
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
