@@ -5,7 +5,7 @@ import { checkRateLimit } from "../lib/rateLimit";
 import { embedText } from "../lib/openai";
 import type { ChatMessage } from "../lib/deepseek";
 import { getChatReply } from "../lib/chatProvider";
-import { buildSystemPrompt } from "../lib/systemPrompt";
+import { buildSystemPrompt, getResponseLengthMaxTokens } from "../lib/systemPrompt";
 import {
   MAX_MESSAGE_LENGTH,
   redactSensitiveInfo,
@@ -311,7 +311,7 @@ export async function handleChat(request: Request, env: Env, ctx: ExecutionConte
   let usedFallback: boolean;
   const chatStartedAt = Date.now();
   try {
-    const result = await getChatReply(env, service, callerId, session.use_fallback_chat === true, chatMessages);
+    const result = await getChatReply(env, service, callerId, session.use_fallback_chat === true, chatMessages, getResponseLengthMaxTokens(widget.response_length));
     reply = result.reply;
     usedFallback = result.usedFallback;
   } catch {

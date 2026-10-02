@@ -25,15 +25,16 @@ export async function getChatReply(
   sessionId: string,
   useFallback: boolean,
   messages: ChatMessage[],
+  maxTokens?: number,
 ): Promise<ChatReplyResult> {
   if (!useFallback) {
     try {
-      return { reply: await deepseekChat(env, messages), usedFallback: false };
+      return { reply: await deepseekChat(env, messages, maxTokens), usedFallback: false };
     } catch {
       await service.from("widget_sessions").update({ use_fallback_chat: true }).eq("id", sessionId);
     }
   }
-  return { reply: await openaiChat(env, messages), usedFallback: true };
+  return { reply: await openaiChat(env, messages, maxTokens), usedFallback: true };
 }
 
 // A simpler fallback than getChatReply above -- no per-session persisted "always use

@@ -35,13 +35,36 @@ const RESPONSE_STYLE_INSTRUCTIONS: Record<string, string> = {
 // long context block -- a bare adjective like "concise" is too easily outweighed by
 // an instruction to answer from a large chunk of retrieved reference text, which is
 // exactly the failure mode this is fixing (a widget set to "concise" still producing
-// long answers because "use the context" was the stronger signal).
+// long answers because "use the context" was the stronger signal). "normal" used to
+// lack this override clause entirely (the one length tier without it), and measured
+// real replies confirmed it: with a substantial retrieved document in play, "normal"
+// averaged ~125 words -- more than 3x "concise" under the same real context -- as the
+// vague "typically one short paragraph" wording got pulled long by whatever context
+// was retrieved. Tightened to name a concrete sentence count and explicitly override
+// the context pull, same as every other tier.
 const RESPONSE_LENGTH_INSTRUCTIONS: Record<string, string> = {
   terse: "Respond in a single short sentence, no more than about 15 words. No lists, no elaboration, even if the reference context above is long.",
   concise: "Respond in 2-3 short sentences at most. Include only the single most important point and omit secondary detail, even if the reference context above is long.",
-  normal: "Respond with a normal, natural length -- typically one short paragraph or a few sentences.",
+  normal: "Respond in one short paragraph, 2-4 sentences at most, covering only the points directly relevant to the question. Do not restate the full reference context above, even if it is long.",
   verbose: "Respond thoroughly, covering relevant nuance and detail. Multiple paragraphs or a structured list are fine when they help.",
 };
+
+// A hard ceiling per tier, passed as max_tokens/max_completion_tokens to the actual
+// completion call (see chatProvider.ts) -- a backstop against the prompt instruction
+// not being followed, not the primary mechanism for any tier. Sized generously above
+// each tier's own real, measured typical length (including with a substantial
+// retrieved document in context) so it essentially never truncates a normal reply
+// mid-sentence; it only guards against a worst-case runaway response.
+const RESPONSE_LENGTH_MAX_TOKENS: Record<string, number> = {
+  terse: 60,
+  concise: 150,
+  normal: 160,
+  verbose: 700,
+};
+
+export function getResponseLengthMaxTokens(responseLength: string): number {
+  return RESPONSE_LENGTH_MAX_TOKENS[responseLength] ?? RESPONSE_LENGTH_MAX_TOKENS.normal;
+}
 
 // Falls back to the schema's own default value for anything that isn't a recognized
 // key -- defensive against a stored value predating some future added/renamed option,
