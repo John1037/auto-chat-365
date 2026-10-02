@@ -20,7 +20,7 @@ import { handleAiAnalysis } from "./routes/ai-analysis";
 import { getServiceClient } from "./lib/supabase";
 import { tagQuietConversations } from "./lib/conversationTagging";
 
-async function routeApiRequest(pathname: string, request: Request, env: Env): Promise<Response> {
+async function routeApiRequest(pathname: string, request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   switch (pathname) {
     case "/api/config":
       // Both values are meant to be public -- the publishable key is designed to
@@ -34,7 +34,7 @@ async function routeApiRequest(pathname: string, request: Request, env: Env): Pr
     case "/api/session-start":
       return handleSessionStart(request, env);
     case "/api/chat":
-      return handleChat(request, env);
+      return handleChat(request, env, ctx);
     case "/api/conversation-history":
       return handleConversationHistory(request, env);
     case "/api/ingest-document":
@@ -71,7 +71,7 @@ async function routeApiRequest(pathname: string, request: Request, env: Env): Pr
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const { pathname } = new URL(request.url);
 
     if (pathname.startsWith("/api/")) {
@@ -86,7 +86,7 @@ export default {
       // curl, which doesn't enforce CORS at all, so this class of bug can look fully
       // verified via curl while being broken for every real cross-origin caller).
       const origin = request.headers.get("Origin") ?? "*";
-      const response = await routeApiRequest(pathname, request, env);
+      const response = await routeApiRequest(pathname, request, env, ctx);
       return withCorsHeaders(response, origin);
     }
 

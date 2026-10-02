@@ -16,6 +16,7 @@ import {
 } from "../lib/guardrails";
 import { checkModeration } from "../lib/moderation";
 import { recordChatStats } from "../lib/dailyStats";
+import { tagOneConversation } from "../lib/conversationTagging";
 
 // Generic on purpose -- naming which specific check fired (injection attempt,
 // blocked topic, profanity, moderation category) to the visitor would just hand an
@@ -36,7 +37,7 @@ const DAILY_RATE_WINDOW_SECONDS = 86400;
 // The chat round trip: verify the visitor, re-derive their tenant/widget from our own
 // records (never from the JWT claim alone), retrieve tenant+widget-scoped context,
 // call the LLM, and persist both sides of the exchange.
-export async function handleChat(request: Request, env: Env): Promise<Response> {
+export async function handleChat(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -69,7 +70,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   const { data: widget, error: widgetError } = await service
     .from("widgets")
     .select(
-      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy, tenants!inner(is_active)",
+      "allowed_origins, rate_limit_per_minute, rate_limit_daily, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy, timezone, tenants!inner(is_active)",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -152,6 +153,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
       conversationId = undefined;
     }
   }
+  let isNewConversation = false;
   if (!conversationId) {
     const { data: created, error: createError } = await service
       .from("conversations")
@@ -162,13 +164,15 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
       return new Response(JSON.stringify({ error: "failed to start conversation" }), { status: 500 });
     }
     conversationId = created.id;
+    isNewConversation = true;
   }
 
-  // A conversation resuming after already being tagged (see conversationTagging.ts)
-  // means its topic tag is now stale -- clear it so the hourly job re-tags it once it
-  // goes quiet again. Harmless no-op on the far more common case of an untagged or
-  // brand-new conversation; never worth failing the chat turn over.
-  await service.from("conversation_topics").delete().eq("conversation_id", conversationId);
+  // A conversation resuming after already being finally tagged (see
+  // conversationTagging.ts) means that tag is now stale -- mark it non-final so the
+  // hourly job re-tags it, with the full now-longer transcript, once it goes quiet
+  // again. Harmless no-op for a brand-new conversation (no row exists yet) or one
+  // that's only ever had a preliminary tag; never worth failing the chat turn over.
+  await service.from("conversation_topics").update({ is_final: false }).eq("conversation_id", conversationId);
 
   const { data: history } = await service
     .from("messages")
@@ -186,6 +190,33 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   });
   if (userInsertError) {
     return new Response(JSON.stringify({ error: "failed to save message" }), { status: 500 });
+  }
+
+  if (isNewConversation) {
+    // A rough first-pass topic tag, computed from just this first message, so AI
+    // Analysis has something to work with within seconds instead of waiting up to
+    // ~90 minutes for the quiet-conversation batch job (30 min quiet threshold, plus
+    // up to an hour until the next cron tick). Replaced with a fuller tag from the
+    // complete transcript once the conversation actually goes quiet (see
+    // conversationTagging.ts). ctx.waitUntil runs this after the response has already
+    // been sent back to the visitor -- ordinary un-awaited code in a Worker can be
+    // torn down the moment the response returns, so this is the correct way to do
+    // fire-and-forget work here, not just omitting the await.
+    const conversationDate = new Intl.DateTimeFormat("en-CA", { timeZone: widget.timezone || "UTC" }).format(new Date());
+    ctx.waitUntil(
+      tagOneConversation(
+        env,
+        service,
+        {
+          conversation_id: conversationId!, // set to created.id just above whenever isNewConversation is true
+          tenant_id: tenantId,
+          widget_id: widgetId,
+          conversation_date: conversationDate,
+          conversation_started_at: new Date().toISOString(),
+        },
+        false,
+      ).catch(() => {}),
+    );
   }
 
   // Guardrail checks -- all deterministic and all before the model is ever called

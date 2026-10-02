@@ -50,7 +50,15 @@ function parseTaggingResponse(raw: string): TaggingResult | null {
   return { topic_label: topicLabel.slice(0, 100), summary: summary.slice(0, 500) };
 }
 
-async function tagOneConversation(env: Env, service: SupabaseClient, candidate: TaggingCandidate): Promise<void> {
+// Tags a single conversation and stores the result, replacing any existing tag for
+// it. Used two ways (see callers below): a fast "preliminary" pass (isFinal=false)
+// from just the first message, fired off from chat.ts without delaying the chat
+// reply, and a "final" pass (isFinal=true) from the hourly cron once the
+// conversation has actually gone quiet, reading the full transcript. Delete-then-
+// insert rather than upsert -- replacing a preliminary tag with a final one (or a
+// stale final one with a fresh one after the conversation resumes and re-quiets)
+// this way needs no unique constraint or ON CONFLICT target.
+export async function tagOneConversation(env: Env, service: SupabaseClient, candidate: TaggingCandidate, isFinal: boolean): Promise<void> {
   const { data: messages } = await service
     .from("messages")
     .select("role, content")
@@ -71,12 +79,13 @@ async function tagOneConversation(env: Env, service: SupabaseClient, candidate: 
   try {
     raw = await chatWithFallback(env, chatMessages, 150); // a small JSON object, no need for much headroom
   } catch {
-    return; // best-effort -- stays untagged, retried on a later cron tick
+    return; // best-effort -- stays untagged (or keeps its prior tag), retried later
   }
 
   const result = parseTaggingResponse(raw);
   if (!result) return;
 
+  await service.from("conversation_topics").delete().eq("conversation_id", candidate.conversation_id);
   await service.from("conversation_topics").insert({
     conversation_id: candidate.conversation_id,
     tenant_id: candidate.tenant_id,
@@ -85,19 +94,21 @@ async function tagOneConversation(env: Env, service: SupabaseClient, candidate: 
     conversation_started_at: candidate.conversation_started_at,
     topic_label: result.topic_label,
     summary: result.summary,
+    is_final: isFinal,
   });
 }
 
 // Called from the hourly cron (see index.ts's scheduled() handler). Each candidate is
 // tagged independently -- one conversation failing (a malformed response, both
 // providers down for that call) never blocks the rest of the batch, and it simply
-// stays untagged for the next tick to pick up again.
+// stays untagged (or keeps its preliminary tag) for the next tick to pick up again.
+// This is the "final" pass -- see tagOneConversation's own comment.
 export async function tagQuietConversations(env: Env, service: SupabaseClient): Promise<void> {
   const { data: candidates } = await service.rpc("find_untagged_quiet_conversations", { p_limit: TAG_BATCH_LIMIT });
   const queue = (candidates ?? []) as TaggingCandidate[];
 
   for (let i = 0; i < queue.length; i += TAG_CONCURRENCY) {
     const chunk = queue.slice(i, i + TAG_CONCURRENCY);
-    await Promise.all(chunk.map((candidate) => tagOneConversation(env, service, candidate)));
+    await Promise.all(chunk.map((candidate) => tagOneConversation(env, service, candidate, true)));
   }
 }
