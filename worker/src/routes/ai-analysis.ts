@@ -14,7 +14,6 @@ interface AnalysisBody {
 }
 
 const MAX_QUERY_LENGTH = 500;
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // A real LLM call per question, unlike Volume (which is pure Postgres via RLS) --
 // worth its own tenant-wide limit independent of the chat widget's own per-widget
@@ -72,10 +71,15 @@ export async function handleAiAnalysis(request: Request, env: Env): Promise<Resp
     return new Response(JSON.stringify({ error: `query is too long (${MAX_QUERY_LENGTH} characters max)` }), { status: 400 });
   }
 
+  // Full timestamps, not bare dates -- this supports hour-level presets ("last 1
+  // hour", "last 6 hours") as well as day-level ones, all through the same
+  // conversation_started_at comparison (see migration 0030).
   const rangeStart = body.range_start;
   const rangeEnd = body.range_end;
-  if (!rangeStart || !rangeEnd || !ISO_DATE_RE.test(rangeStart) || !ISO_DATE_RE.test(rangeEnd) || rangeStart > rangeEnd) {
-    return new Response(JSON.stringify({ error: "range_start and range_end must be valid dates, with range_start on or before range_end" }), { status: 400 });
+  const rangeStartMs = rangeStart ? Date.parse(rangeStart) : NaN;
+  const rangeEndMs = rangeEnd ? Date.parse(rangeEnd) : NaN;
+  if (!rangeStart || !rangeEnd || Number.isNaN(rangeStartMs) || Number.isNaN(rangeEndMs) || rangeStartMs > rangeEndMs) {
+    return new Response(JSON.stringify({ error: "range_start and range_end must be valid timestamps, with range_start on or before range_end" }), { status: 400 });
   }
 
   let widgetId: string | null = null;
@@ -91,8 +95,8 @@ export async function handleAiAnalysis(request: Request, env: Env): Promise<Resp
     .from("conversation_topics")
     .select("topic_label, summary")
     .eq("tenant_id", tenantId)
-    .gte("conversation_date", rangeStart)
-    .lte("conversation_date", rangeEnd);
+    .gte("conversation_started_at", rangeStart)
+    .lte("conversation_started_at", rangeEnd);
   if (widgetId) topicsQuery = topicsQuery.eq("widget_id", widgetId);
 
   const { data: rows, error: rowsError } = await topicsQuery;

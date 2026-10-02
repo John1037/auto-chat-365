@@ -141,7 +141,11 @@ async function main() {
   assert(many.containerScrollWidth === many.containerClientWidth, `many-period view (${many.dotCount} points) never needs to scroll horizontally either`);
 
   assert(few.dotCount >= 3 && few.dotCount <= 5, `few-period view plots one point per month bucket (got ${few.dotCount})`);
-  assert(many.dotCount > 340, `many-period view plots every single day as a point, none dropped (got ${many.dotCount})`);
+  // "Last 12 months" spans from day 1 of 11-months-ago to today, so its exact day
+  // count depends on today's day-of-month (as low as ~334, as high as ~365) --
+  // not a fixed 365-day window. 300 is comfortably below that whole range while
+  // still confirming none of the ~380 seeded days got dropped.
+  assert(many.dotCount > 300, `many-period view plots every single day as a point, none dropped (got ${many.dotCount})`);
 
   assert(few.labelCount === few.dotCount, `with few periods, every one gets its own label (got ${few.labelCount} labels for ${few.dotCount} points)`);
   assert(many.labelCount < many.dotCount, `with many periods, not every one gets a label (got ${many.labelCount} labels for ${many.dotCount} points)`);

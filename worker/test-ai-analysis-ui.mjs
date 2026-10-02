@@ -96,6 +96,24 @@ async function main() {
   assert(answerMeta.includes("1 tagged conversation"), `the meta line reflects the real considered count (got "${answerMeta}")`);
   assert(window.document.querySelector("#analyze-button").disabled === false, "the Analyze button is re-enabled after completion");
 
+  console.log("--- The new hour-level presets ('Last 1 hour', 'Today', 'Yesterday') submit without error ---");
+  for (const presetValue of ["last_hour", "last_6_hours", "today", "yesterday"]) {
+    rangePreset.value = presetValue;
+    rangePreset.dispatchEvent(new window.Event("change", { bubbles: true }));
+    window.document.querySelector("#query-form").dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
+    await new Promise((resolve, reject) => {
+      const start = Date.now();
+      const check = () => {
+        if (window.document.querySelector("#analyze-button").disabled === false && window.document.querySelector("#query-status").textContent === "") return resolve();
+        if (window.document.querySelector("#query-status").classList.contains("error")) return reject(new Error(`preset '${presetValue}' failed: ${window.document.querySelector("#query-status").textContent}`));
+        if (Date.now() - start > 20000) return reject(new Error(`timed out waiting for preset '${presetValue}' to resolve`));
+        setTimeout(check, 300);
+      };
+      check();
+    });
+    assert(true, `preset '${presetValue}' computes a valid range and the request succeeds`);
+  }
+
   window.close();
   await service.from("tenants").delete().eq("id", tenant.id);
   console.log("\nALL AI ANALYSIS UI CHECKS PASSED");

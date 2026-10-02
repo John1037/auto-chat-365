@@ -88,6 +88,7 @@ async function main() {
   assert(taggedRow.tenant_id === tenantA, "tagged row carries the correct tenant_id");
   assert(taggedRow.widget_id === widgetA.id, "tagged row carries the correct widget_id");
   assert(!!taggedRow.conversation_date, "tagged row carries a conversation_date");
+  assert(!!taggedRow.conversation_started_at, "tagged row carries a real conversation_started_at timestamp");
 
   console.log("--- Resuming the tagged conversation invalidates its stale tag ---");
   await chat(accessTokenA, "Actually, one more question -- do you support SSO?", conversationId);

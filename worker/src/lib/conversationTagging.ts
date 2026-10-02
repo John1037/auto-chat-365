@@ -23,6 +23,7 @@ interface TaggingCandidate {
   tenant_id: string;
   widget_id: string;
   conversation_date: string;
+  conversation_started_at: string;
 }
 
 interface TaggingResult {
@@ -81,6 +82,7 @@ async function tagOneConversation(env: Env, service: SupabaseClient, candidate: 
     tenant_id: candidate.tenant_id,
     widget_id: candidate.widget_id,
     conversation_date: candidate.conversation_date,
+    conversation_started_at: candidate.conversation_started_at,
     topic_label: result.topic_label,
     summary: result.summary,
   });
