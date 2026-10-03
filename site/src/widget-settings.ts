@@ -26,6 +26,8 @@ interface WidgetRow {
   blocked_topics: string[];
   nsfw_policy: string;
   timezone: string;
+  icon_scale_pct: number;
+  window_scale_pct: number;
 }
 
 const loadingEl = document.querySelector<HTMLElement>("#loading")!;
@@ -46,6 +48,10 @@ const themeInput = document.querySelector<HTMLSelectElement>("#theme-input")!;
 const positionInput = document.querySelector<HTMLSelectElement>("#position-input")!;
 const offsetXInput = document.querySelector<HTMLInputElement>("#offset-x-input")!;
 const offsetYInput = document.querySelector<HTMLInputElement>("#offset-y-input")!;
+const iconSizeInput = document.querySelector<HTMLInputElement>("#icon-size-input")!;
+const iconSizeReadout = document.querySelector<HTMLElement>("#icon-size-readout")!;
+const windowSizeInput = document.querySelector<HTMLInputElement>("#window-size-input")!;
+const windowSizeReadout = document.querySelector<HTMLElement>("#window-size-readout")!;
 const originsInput = document.querySelector<HTMLTextAreaElement>("#origins-input")!;
 const nsfwPolicyInput = document.querySelector<HTMLSelectElement>("#nsfw-policy-input")!;
 const profanityPolicyInput = document.querySelector<HTMLSelectElement>("#profanity-policy-input")!;
@@ -54,6 +60,16 @@ const blockedTopicsInput = document.querySelector<HTMLTextAreaElement>("#blocked
 const timezoneInput = document.querySelector<HTMLSelectElement>("#timezone-input")!;
 const saveStatusEl = document.querySelector<HTMLElement>("#save-status")!;
 const snippetEl = document.querySelector<HTMLElement>("#embed-snippet")!;
+
+// Keeps a size slider's "+N%" readout in sync live, not just on save -- a slider
+// with no visible numeric value is hard to use precisely.
+function wireSizeSlider(input: HTMLInputElement, readout: HTMLElement, initialValue: number): void {
+  input.value = String(initialValue);
+  readout.textContent = `+${initialValue}%`;
+  input.addEventListener("input", () => {
+    readout.textContent = `+${input.value}%`;
+  });
+}
 
 function parseLines(raw: string): string[] {
   return raw
@@ -194,7 +210,7 @@ async function main() {
   const { data, error } = await context.supabase
     .from("widgets")
     .select(
-      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy, timezone",
+      "id, name, chatbot_name, color_scheme, chat_title, position, offset_x, offset_y, allowed_origins, site_key, logo_url, avatar_url, header_color, theme, greeting_message, character_style, response_style, response_length, profanity_policy, off_topic_policy, blocked_topics, nsfw_policy, timezone, icon_scale_pct, window_scale_pct",
     )
     .eq("id", widgetId)
     .maybeSingle();
@@ -225,6 +241,8 @@ async function main() {
   positionInput.value = widget.position;
   offsetXInput.value = String(widget.offset_x);
   offsetYInput.value = String(widget.offset_y);
+  wireSizeSlider(iconSizeInput, iconSizeReadout, widget.icon_scale_pct);
+  wireSizeSlider(windowSizeInput, windowSizeReadout, widget.window_scale_pct);
   originsInput.value = widget.allowed_origins.join("\n");
   snippetEl.textContent = `<script src="${location.origin}/widget.js" data-site-key="${widget.site_key}" async><\/script>`;
 
@@ -278,6 +296,8 @@ async function main() {
         position: positionInput.value,
         offset_x: Number(offsetXInput.value),
         offset_y: Number(offsetYInput.value),
+        icon_scale_pct: Number(iconSizeInput.value),
+        window_scale_pct: Number(windowSizeInput.value),
         allowed_origins: parseLines(originsInput.value),
       })
       .eq("id", widgetId);

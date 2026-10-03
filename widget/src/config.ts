@@ -15,6 +15,8 @@ const DEFAULTS: FullConfig = {
   accentColor: "#468ad0",
   headerColor: "#0e1213",
   theme: "dark",
+  iconScalePct: 0,
+  windowScalePct: 0,
   chatTitle: "Chat with us",
   logoUrl: null,
   greetingMessage: "Hi, how can we help?",
@@ -55,6 +57,8 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       theme: "light" | "dark" | "auto";
       greeting_message: string;
       chatbot_name: string | null;
+      icon_scale_pct: number;
+      window_scale_pct: number;
     };
     return {
       position: data.position === "bottom-left" ? "bottom-left" : "bottom-right",
@@ -63,6 +67,8 @@ export async function fetchDisplayConfig(apiBase: string, siteKey: string): Prom
       accentColor: data.color_scheme,
       headerColor: data.header_color,
       theme: resolveTheme(data.theme),
+      iconScalePct: data.icon_scale_pct,
+      windowScalePct: data.window_scale_pct,
       chatTitle: data.chat_title,
       logoUrl: data.logo_url,
       greetingMessage: data.greeting_message,

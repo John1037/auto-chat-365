@@ -102,6 +102,8 @@ async function main() {
   assert(appearanceIds.includes("header-color-input"), "Appearance contains top bar background");
   assert(appearanceIds.includes("theme-input"), "Appearance contains the theme selector");
   assert(appearanceIds.includes("position-input"), "Appearance contains position");
+  assert(appearanceIds.includes("icon-size-input"), "Appearance contains the icon size slider");
+  assert(appearanceIds.includes("window-size-input"), "Appearance contains the chat window size slider");
 
   const guardrailIds = [...fieldsets[3].querySelectorAll("input, select, textarea")].map((el) => el.id);
   assert(

@@ -7,6 +7,11 @@ export interface WidgetDisplayConfig {
   accentColor: string;
   headerColor: string;
   theme: ResolvedTheme;
+  // Percentage increase over the base/default size below, 0-100 (0 = default size,
+  // 100 = double). Independent dials -- a tenant can grow the launcher without
+  // touching the window, or vice versa.
+  iconScalePct: number;
+  windowScalePct: number;
 }
 
 interface Palette {
@@ -51,10 +56,23 @@ const PALETTES: Record<ResolvedTheme, Palette> = {
   },
 };
 
+// Base (0%) sizes -- the single source of truth for "default," scaled up from here
+// by each config's own iconScalePct/windowScalePct (0-100, each independent).
+const BASE_ICON_PX = 56;
+const BASE_ICON_SVG_PX = 26;
+const BASE_PANEL_WIDTH_PX = 340;
+const BASE_PANEL_HEIGHT_PX = 480;
+
 export function widgetCss(config: WidgetDisplayConfig): string {
   const side = config.position === "bottom-left" ? "left" : "right";
-  const { offsetX, offsetY, accentColor, headerColor, theme } = config;
+  const { offsetX, offsetY, accentColor, headerColor, theme, iconScalePct, windowScalePct } = config;
   const p = PALETTES[theme];
+  const iconScale = 1 + iconScalePct / 100;
+  const windowScale = 1 + windowScalePct / 100;
+  const iconPx = Math.round(BASE_ICON_PX * iconScale);
+  const iconSvgPx = Math.round(BASE_ICON_SVG_PX * iconScale);
+  const panelWidthPx = Math.round(BASE_PANEL_WIDTH_PX * windowScale);
+  const panelHeightPx = Math.round(BASE_PANEL_HEIGHT_PX * windowScale);
   return `
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
@@ -62,8 +80,8 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       position: fixed;
       ${side}: ${offsetX}px;
       bottom: ${offsetY}px;
-      width: 56px;
-      height: 56px;
+      width: ${iconPx}px;
+      height: ${iconPx}px;
       border-radius: 50%;
       background: #0e1213;
       border: none;
@@ -74,7 +92,7 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       justify-content: center;
       z-index: 2147483000;
     }
-    .launcher svg { width: 26px; height: 26px; }
+    .launcher svg { width: ${iconSvgPx}px; height: ${iconSvgPx}px; }
 
     .panel {
       /* Same anchor point as .launcher (same side/offsetX/offsetY), not stacked
@@ -87,9 +105,9 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       position: fixed;
       ${side}: ${offsetX}px;
       bottom: ${offsetY}px;
-      width: 340px;
+      width: ${panelWidthPx}px;
       max-width: calc(100vw - 40px);
-      height: 480px;
+      height: ${panelHeightPx}px;
       max-height: calc(100vh - 120px);
       background: ${p.panelBg};
       border: 1px solid ${p.panelBorder};
