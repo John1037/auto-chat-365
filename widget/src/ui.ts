@@ -61,7 +61,7 @@ export function createWidget(
 
   const poweredBy = document.createElement("div");
   poweredBy.className = "powered-by";
-  poweredBy.textContent = "Powered by 365 Applications Ltd";
+  poweredBy.textContent = "Powered by 365 Applications";
 
   const inputRow = document.createElement("form");
   inputRow.className = "input-row";
