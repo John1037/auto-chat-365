@@ -1,5 +1,5 @@
 import type { Env } from "./env";
-import type { ChatMessage } from "./deepseek";
+import type { ChatMessage, ChatCompletionResult } from "./deepseek";
 
 const EMBEDDING_MODEL = "text-embedding-3-small"; // 1536 dims, matches
 // tenant_document_chunks.embedding vector(1536) in
@@ -54,7 +54,7 @@ export async function embedTexts(env: Env, texts: string[]): Promise<number[][]>
 // chat.ts) -- same OpenAI key already used for embeddings, just a different
 // endpoint. Same ChatMessage shape as deepseekChat so the caller doesn't need to
 // know which provider actually served a given request.
-export async function openaiChat(env: Env, messages: ChatMessage[], maxTokens?: number): Promise<string> {
+export async function openaiChat(env: Env, messages: ChatMessage[], maxTokens?: number): Promise<ChatCompletionResult> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -71,10 +71,20 @@ export async function openaiChat(env: Env, messages: ChatMessage[], maxTokens?: 
     throw new Error(`OpenAI chat request failed: ${response.status} ${await response.text()}`);
   }
 
-  const json = (await response.json()) as { choices: { message: { content: string } }[] };
-  const content = json.choices[0]?.message?.content;
+  const json = (await response.json()) as { choices: { message: { content: string }; finish_reason?: string }[] };
+  const choice = json.choices[0];
+  const content = choice?.message?.content;
   if (!content) {
+    // A small max_tokens budget can leave this model zero room to emit any visible
+    // content at all (confirmed directly against the real API -- this model uses
+    // reasoning tokens that count against max_completion_tokens before any visible
+    // output does). That's still a length-truncation, just an extreme one, and
+    // completeWithCondenseRetry's retry (with real extra headroom) is the right
+    // response to it, not a hard failure.
+    if (choice?.finish_reason === "length") {
+      return { content: "", finishReason: "length" };
+    }
     throw new Error("OpenAI returned an empty response");
   }
-  return content;
+  return { content, finishReason: choice?.finish_reason ?? null };
 }

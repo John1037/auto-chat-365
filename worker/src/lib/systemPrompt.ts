@@ -51,25 +51,23 @@ const RESPONSE_LENGTH_INSTRUCTIONS: Record<string, string> = {
 
 // A hard ceiling per tier, passed as max_tokens/max_completion_tokens to the actual
 // completion call (see chatProvider.ts) -- a backstop against the prompt instruction
-// not being followed, not the primary mechanism for any tier.
-//
-// Earlier values (60/150/160/700) were calibrated against narrow FAQ-style test
-// questions (shipping/returns policy) and were too tight in practice: a real tenant
-// (response_length='normal') hit a genuine mid-sentence cutoff on an open-ended
-// advice-style question -- "should I apply for a job I'm not a great match for" --
-// whose natural answer (a recommendation plus caveats plus an exception case) ran
-// longer than a policy lookup ever would, despite being a perfectly normal, well-
-// formed reply. The widget has to work for any tenant's site and any topic, not just
-// the one it happens to be tested against, so these are deliberately generous
-// regardless of domain: comfortably above what even a nuanced, multi-clause opinion/
-// advice answer needs at each tier, not just a fact lookup. Still a real ceiling
-// against genuinely pathological/runaway output, just one that shouldn't bind for
-// any normal, well-formed reply regardless of subject matter.
+// not being followed, not the primary mechanism for any tier, and not the thing that
+// guarantees a complete reply either: raising this number only moves the point where
+// a genuinely long answer gets cut off, it doesn't prevent it (confirmed directly: a
+// real tenant on 'normal' got a mid-sentence cutoff on an open-ended advice question,
+// and simply widening the cap to "cover" that case is treating the symptom -- the
+// next topic/tenant that needs more room than whatever number is picked here would
+// hit the exact same failure). The actual fix is in chatProvider.ts:
+// completeWithCondenseRetry detects a truncated completion (finish_reason ===
+// "length") and asks the model to re-answer completely within budget, with
+// trimToCompleteSentence as a final safety net -- so these stay sized to each tier's
+// own actual intent (a short sentence, a couple of sentences, a short paragraph,
+// a thorough answer), not inflated to try to outrun every possible topic.
 const RESPONSE_LENGTH_MAX_TOKENS: Record<string, number> = {
-  terse: 100,
-  concise: 300,
-  normal: 500,
-  verbose: 1500,
+  terse: 60,
+  concise: 150,
+  normal: 160,
+  verbose: 700,
 };
 
 export function getResponseLengthMaxTokens(responseLength: string): number {
