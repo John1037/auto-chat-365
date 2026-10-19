@@ -1,5 +1,6 @@
 // Verifies the new widget branding settings (header logo, header background color)
-// and the fixed "Powered by 365 Applications" footer line, by running the actual
+// and the fixed "Powered by 365 Applications Ltd" footer line (with the entity name
+// linked to https://365applications.com), by running the actual
 // built widget.js bundle in a real DOM against a real widget-config response --
 // same eval-based technique as test-runtime-config.mjs.
 import { createClient } from "@supabase/supabase-js";
@@ -81,7 +82,13 @@ async function main() {
 
   const poweredBy = shadow.querySelector(".powered-by");
   assert(!!poweredBy, ".powered-by element exists");
-  assert(poweredBy.textContent === "Powered by 365 Applications", "footer text is exactly right");
+  assert(poweredBy.textContent === "Powered by 365 Applications Ltd", "footer text is exactly right");
+  const poweredByLink = poweredBy.querySelector("a");
+  assert(!!poweredByLink, "'365 Applications Ltd' is a real link, not plain text");
+  assert(poweredByLink.textContent === "365 Applications Ltd", "the link's own text is just the entity name, not the 'Powered by' prefix");
+  assert(poweredByLink.getAttribute("href") === "https://365applications.com", `link points at the real site (got '${poweredByLink.getAttribute("href")}')`);
+  assert(poweredByLink.getAttribute("target") === "_blank", "link opens in a new tab");
+  assert(poweredByLink.getAttribute("rel") === "noopener noreferrer", "link has noopener noreferrer, same convention as markdown-rendered links");
 
   const panelChildren = Array.from(shadow.querySelector(".panel").children).map((el) => el.className);
   const poweredByIndex = panelChildren.indexOf("powered-by");

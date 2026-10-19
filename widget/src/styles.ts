@@ -211,6 +211,8 @@ export function widgetCss(config: WidgetDisplayConfig): string {
       padding: 4px 0;
       flex-shrink: 0;
     }
+    .powered-by a { color: inherit; text-decoration: none; }
+    .powered-by a:hover { text-decoration: underline; }
 
     .input-row {
       display: flex;
