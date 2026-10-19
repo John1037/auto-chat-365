@@ -51,15 +51,25 @@ const RESPONSE_LENGTH_INSTRUCTIONS: Record<string, string> = {
 
 // A hard ceiling per tier, passed as max_tokens/max_completion_tokens to the actual
 // completion call (see chatProvider.ts) -- a backstop against the prompt instruction
-// not being followed, not the primary mechanism for any tier. Sized generously above
-// each tier's own real, measured typical length (including with a substantial
-// retrieved document in context) so it essentially never truncates a normal reply
-// mid-sentence; it only guards against a worst-case runaway response.
+// not being followed, not the primary mechanism for any tier.
+//
+// Earlier values (60/150/160/700) were calibrated against narrow FAQ-style test
+// questions (shipping/returns policy) and were too tight in practice: a real tenant
+// (response_length='normal') hit a genuine mid-sentence cutoff on an open-ended
+// advice-style question -- "should I apply for a job I'm not a great match for" --
+// whose natural answer (a recommendation plus caveats plus an exception case) ran
+// longer than a policy lookup ever would, despite being a perfectly normal, well-
+// formed reply. The widget has to work for any tenant's site and any topic, not just
+// the one it happens to be tested against, so these are deliberately generous
+// regardless of domain: comfortably above what even a nuanced, multi-clause opinion/
+// advice answer needs at each tier, not just a fact lookup. Still a real ceiling
+// against genuinely pathological/runaway output, just one that shouldn't bind for
+// any normal, well-formed reply regardless of subject matter.
 const RESPONSE_LENGTH_MAX_TOKENS: Record<string, number> = {
-  terse: 60,
-  concise: 150,
-  normal: 160,
-  verbose: 700,
+  terse: 100,
+  concise: 300,
+  normal: 500,
+  verbose: 1500,
 };
 
 export function getResponseLengthMaxTokens(responseLength: string): number {
